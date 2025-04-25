@@ -1,0 +1,31 @@
+services:
+  splitbooks:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8888:8080"
+    networks:
+      - splitbooks-n
+
+
+  postgres:
+    image: postgres
+    container_name: "postgres"
+    ports:
+      - "5434:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=12345678
+      - POSTGRES_DB=splitbooks
+    networks:
+      - splitbooks-n
+    volumes:
+      - postgres:/var/lib/postgresql/data
+
+volumes:
+  postgres:
+
+networks:
+  splitbooks-n:
+    driver: bridge
