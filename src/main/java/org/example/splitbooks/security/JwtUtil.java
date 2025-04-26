@@ -6,6 +6,7 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
@@ -17,8 +18,9 @@ import java.util.Map;
 
 @Component
 public class JwtUtil {
-    private static final Logger logger = LoggerFactory.getLogger(JwtUtil.class);
-    private final String SECRET_KEY = "mysecretdddddddddddfsdfmswefnwjkbfcjdckfhjkkey123456"; // Use ENV variables in real apps!
+
+    @Value("${jwt.secretkey}")
+    private String SECRET_KEY;
 
     public String generateToken(Long userId, String email) {
         Map<String, Object> claims = new HashMap<>();
@@ -29,7 +31,7 @@ public class JwtUtil {
                 .setClaims(claims)
                 .setSubject(email)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10)) // 10h token
+                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10)) //10h
                 .signWith(SignatureAlgorithm.HS256, SECRET_KEY)
                 .compact();
     }

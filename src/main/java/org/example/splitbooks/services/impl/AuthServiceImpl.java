@@ -9,6 +9,7 @@ import org.example.splitbooks.entity.User;
 import org.example.splitbooks.repositories.ProfileRepository;
 import org.example.splitbooks.repositories.UserRepository;
 import org.example.splitbooks.security.JwtUtil;
+import org.example.splitbooks.security.Regex;
 import org.example.splitbooks.services.AuthService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -22,12 +23,14 @@ public class AuthServiceImpl implements AuthService {
     private final ProfileRepository profileRepository;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
+    private final Regex regex;
 
-    public AuthServiceImpl(UserRepository userRepository,ProfileRepository profileRepository,JwtUtil jwtUtil, PasswordEncoder passwordEncoder) {
+    public AuthServiceImpl(UserRepository userRepository,ProfileRepository profileRepository,JwtUtil jwtUtil, Regex regex,PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.profileRepository = profileRepository;
         this.jwtUtil = jwtUtil;
         this.passwordEncoder = passwordEncoder;
+        this.regex = regex;
     }
 
     public User register(RegistrationRequest registrationRequest) {
@@ -37,7 +40,12 @@ public class AuthServiceImpl implements AuthService {
         if (userRepository.existsByEmail(registrationRequest.getEmail()))
             throw new RuntimeException("Email already exists");
 
+        if(!regex.isPasswordStrong(registrationRequest.getPassword())){
+            throw new RuntimeException("Password must be strong");
+        }
+
         User user = new User();
+
 
         user.setPassword(passwordEncoder.encode(registrationRequest.getPassword()));
         user.setEmail(registrationRequest.getEmail());
