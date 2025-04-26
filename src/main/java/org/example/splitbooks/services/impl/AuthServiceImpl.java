@@ -10,23 +10,24 @@ import org.example.splitbooks.repositories.ProfileRepository;
 import org.example.splitbooks.repositories.UserRepository;
 import org.example.splitbooks.security.JwtUtil;
 import org.example.splitbooks.services.AuthService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.Optional;
 
 @Service
 public class AuthServiceImpl implements AuthService {
 
-    public UserRepository userRepository;
-    public ProfileRepository profileRepository;
-    public JwtUtil jwtUtil;
+    private final UserRepository userRepository;
+    private final ProfileRepository profileRepository;
+    private final JwtUtil jwtUtil;
+    private final PasswordEncoder passwordEncoder;
 
-    public AuthServiceImpl(UserRepository userRepository,ProfileRepository profileRepository,JwtUtil jwtUtil) {
+    public AuthServiceImpl(UserRepository userRepository,ProfileRepository profileRepository,JwtUtil jwtUtil, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.profileRepository = profileRepository;
         this.jwtUtil = jwtUtil;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public User register(RegistrationRequest registrationRequest) {
@@ -38,7 +39,7 @@ public class AuthServiceImpl implements AuthService {
 
         User user = new User();
 
-        user.setPassword(registrationRequest.getPassword());
+        user.setPassword(passwordEncoder.encode(registrationRequest.getPassword()));
         user.setEmail(registrationRequest.getEmail());
         user.setPhone(registrationRequest.getPhone());
         user.setFirstName(registrationRequest.getFirstName());
@@ -61,13 +62,14 @@ public class AuthServiceImpl implements AuthService {
 
     public LoginResponse login(LoginRequest loginRequest) {
 
-        User user = userRepository.findByEmail(loginRequest.getEmail());
+        User user = userRepository.findByEmail(loginRequest.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if(!user.getPassword().equals(loginRequest.getPassword())) {
+        if(!passwordEncoder.matches( loginRequest.getPassword(),user.getPassword())) {
             throw new RuntimeException("Invalid password");
         }
 
-        String token = jwtUtil.generateToken(user.getUserId(), user.getEmail()); // <- you need jwtService injected!
+        String token = jwtUtil.generateToken(user.getUserId(), user.getEmail());
 
         LoginResponse loginResponse = new LoginResponse();
         loginResponse.setUserId(user.getUserId());
