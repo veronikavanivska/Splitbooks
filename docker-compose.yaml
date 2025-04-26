@@ -9,6 +9,7 @@ services:
       - splitbooks-n
 
 
+
   postgres:
     image: postgres
     container_name: "postgres"
@@ -25,6 +26,7 @@ services:
 
 volumes:
   postgres:
+
 
 networks:
   splitbooks-n:
