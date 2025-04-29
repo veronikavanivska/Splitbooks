@@ -16,15 +16,13 @@ public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long UserId;
-    private String firstName;
-    private String lastName;
+
     @Column(nullable = false)
     private String email;
 
     @Column(nullable = false)
     private String password;
 
-    private String phone;
 
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)

@@ -3,6 +3,7 @@ package org.example.splitbooks.services.impl;
 import org.example.splitbooks.dto.request.LoginRequest;
 import org.example.splitbooks.dto.request.RegistrationRequest;
 import org.example.splitbooks.dto.response.LoginResponse;
+import org.example.splitbooks.dto.response.RegistrationResponse;
 import org.example.splitbooks.entity.Profile;
 import org.example.splitbooks.entity.ProfileType;
 import org.example.splitbooks.entity.User;
@@ -33,7 +34,7 @@ public class AuthServiceImpl implements AuthService {
         this.regex = regex;
     }
 
-    public User register(RegistrationRequest registrationRequest) {
+    public RegistrationResponse register(RegistrationRequest registrationRequest) {
         if (profileRepository.existsByUsername(registrationRequest.getUsername()))
             throw new RuntimeException("Username already exists");
 
@@ -49,9 +50,6 @@ public class AuthServiceImpl implements AuthService {
 
         user.setPassword(passwordEncoder.encode(registrationRequest.getPassword()));
         user.setEmail(registrationRequest.getEmail());
-        user.setPhone(registrationRequest.getPhone());
-        user.setFirstName(registrationRequest.getFirstName());
-        user.setLastName(registrationRequest.getLastName());
         user.setActiveProfileType(ProfileType.PUBLIC);
         userRepository.save(user);
 
@@ -64,7 +62,14 @@ public class AuthServiceImpl implements AuthService {
 
         profileRepository.save(publicProfile);
 
-        return user;
+
+        String token = jwtUtil.generateToken(user.getUserId(), user.getEmail());
+
+        RegistrationResponse registrationResponse = new RegistrationResponse();
+
+        registrationResponse.setUserId(user.getUserId());
+        registrationResponse.setToken(token);
+        return registrationResponse;
 
     }
 

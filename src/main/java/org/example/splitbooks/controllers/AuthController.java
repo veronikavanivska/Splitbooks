@@ -3,13 +3,11 @@ package org.example.splitbooks.controllers;
 import org.example.splitbooks.dto.request.LoginRequest;
 import org.example.splitbooks.dto.request.RegistrationRequest;
 import org.example.splitbooks.dto.response.LoginResponse;
+import org.example.splitbooks.dto.response.RegistrationResponse;
 import org.example.splitbooks.entity.User;
 import org.example.splitbooks.services.impl.AuthServiceImpl;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 
 @RestController
@@ -22,9 +20,9 @@ public class AuthController {
         this.authServiceImpl = authServiceImpl;
     }
     @PostMapping("/register")
-    public ResponseEntity<User> register(@RequestBody RegistrationRequest registrationRequest) {
-        User user = authServiceImpl.register(registrationRequest);
-        return ResponseEntity.ok(user);
+    public ResponseEntity<RegistrationResponse> register(@RequestBody RegistrationRequest registrationRequest) {
+        RegistrationResponse registrationResponse = authServiceImpl.register(registrationRequest);
+        return ResponseEntity.ok(registrationResponse);
     }
 
     @PostMapping("/login")
