@@ -10,7 +10,7 @@ public class ReadingPreference {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long readingId;
+    private Long readingId;
 
     @ManyToOne
     @JoinColumn(name = "format_id")
