@@ -13,6 +13,10 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 
+
+//TODO: Rewrite the setup for public, change the check in which profile is user now!!!!!
+//TODO: Check this in another services too(write the clean code everywhere)
+
 @Service
 public class ProfileServiceImpl implements ProfileService {
 
@@ -21,9 +25,11 @@ public class ProfileServiceImpl implements ProfileService {
     private final LanguageRepository languageRepository;
     private final ReadingFormatRepository readingFormatRepository;
     private final ReadingPreferenceRepository readingPreferenceRepository;
+    private final UserRepository userRepository;
 
     public ProfileServiceImpl(
             ProfileRepository profileRepository,
+            UserRepository userRepository,
             GenreRepository genreRepository,
             LanguageRepository languageRepository,
             ReadingFormatRepository readingFormatRepository,
@@ -33,14 +39,37 @@ public class ProfileServiceImpl implements ProfileService {
         this.languageRepository = languageRepository;
         this.readingFormatRepository = readingFormatRepository;
         this.readingPreferenceRepository = readingPreferenceRepository;
+        this.userRepository = userRepository;
     }
+    public Profile createAnonymousProfile() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Long userId = Long.parseLong(authentication.getPrincipal().toString());
 
+        if (profileRepository.findByUser_UserIdAndType(userId, ProfileType.ANONYMOUS).isPresent()) {
+            throw new RuntimeException("Anonymous profile already exists.");
+        }
+
+        Profile publicProfile = profileRepository.findByUser_UserIdAndType(userId, ProfileType.PUBLIC)
+                .orElseThrow(() -> new RuntimeException("Public profile must be created first."));
+
+        Profile anonymousProfile = new Profile();
+        anonymousProfile.setType(ProfileType.ANONYMOUS);
+        anonymousProfile.setUser(publicProfile.getUser());
+
+        return profileRepository.save(anonymousProfile);
+    }
     public ProfileSetupResponse setUpProfile(ProfileSetupRequest request) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         System.out.println(authentication.getPrincipal());
         Long userId = Long.parseLong(authentication.getPrincipal().toString());
 
-        Profile profile = profileRepository.findByUser_UserId(userId);
+
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Profile profile = profileRepository.findByUser_UserIdAndType(userId, user.getActiveProfileType())
+                .orElseThrow(() -> new RuntimeException("Active profile not found"));
 
         if (profile.getType() == ProfileType.PUBLIC) {
             setupPublicProfile(profile, request);
@@ -75,6 +104,14 @@ public class ProfileServiceImpl implements ProfileService {
     }
 
     private void setupAnonymousProfile(Profile profile, ProfileSetupRequest request) {
+        profile.setUsername(request.getAnonimousUsername());
+        profile.setAvatarUrl(request.getAvatarUrl());
+
+        List<Genre> selectedGenres = genreRepository.findByGenreIdIn(request.getSelectedGenres());
+        profile.setFavoriteGenres(selectedGenres);
+
+        List<ReadingPreference> preferences = createReadingPreferences(request, profile);
+        profile.setReadingPreferences(preferences);
 
     }
     private List<ReadingPreference> createReadingPreferences(ProfileSetupRequest request, Profile profile) {
@@ -120,5 +157,26 @@ public class ProfileServiceImpl implements ProfileService {
         response.setLanguageNames(profile.getReadingPreferences().stream().map(p -> p.getLanguage().getLanguageName()).distinct().toList());
 
         return response;
+    }
+
+    public void toggleActiveProfileType(Long userId) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        ProfileType currentProfileType = user.getActiveProfileType();
+
+        ProfileType newProfileType;
+        if (currentProfileType == ProfileType.PUBLIC) {
+            newProfileType = ProfileType.ANONYMOUS;
+        } else if (currentProfileType == ProfileType.ANONYMOUS) {
+            newProfileType = ProfileType.PUBLIC;
+        } else {
+            throw new RuntimeException("Invalid profile type");
+        }
+
+
+        user.setActiveProfileType(newProfileType);
+        userRepository.save(user);
     }
 }

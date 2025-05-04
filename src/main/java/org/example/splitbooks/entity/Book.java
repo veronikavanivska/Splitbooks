@@ -12,17 +12,22 @@ import java.util.List;
 public class Book {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long bookId;
 
     private String volumeId;
     private String title;
-    private String author;
-    private String description;
-    private String imageUrl;
     private int pageCount;
     private String publisher;
     private String publishedDate;
 
+    @Column(length = 1000)
+    private String author;
+
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
+    @Column(length = 500)
+    private String imageUrl;
     @OneToMany(mappedBy = "book")
     private List<BookProfile> bookProfiles;
 

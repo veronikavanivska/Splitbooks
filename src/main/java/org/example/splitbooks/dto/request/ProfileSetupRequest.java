@@ -15,5 +15,5 @@ public class ProfileSetupRequest {
     private String avatarUrl;
     private String firstName;
     private String lastName;
-
+    private String anonimousUsername;
 }

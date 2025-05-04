@@ -1,25 +1,43 @@
 package org.example.splitbooks.controllers;
 
 import org.example.splitbooks.dto.request.BooksSearchRequest;
+import org.example.splitbooks.dto.request.ReviewRequest;
 import org.example.splitbooks.dto.response.BookDetailsResponse;
-import org.example.splitbooks.dto.response.GoogleBooksResponse;
-import org.example.splitbooks.services.impl.GoogleBookServiceImpl;
+import org.example.splitbooks.dto.response.BookWithReviewsResponse;
+import org.example.splitbooks.dto.response.BooksResponse;
+import org.example.splitbooks.dto.response.ReviewResponse;
+import org.example.splitbooks.services.impl.BookServiceImpl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/books")
-public class GoogleBooksController {
+public class BooksController {
 
-    private GoogleBookServiceImpl googleBooksService;
+    private BookServiceImpl booksService;
 
-    public GoogleBooksController(GoogleBookServiceImpl googleBooksService) {
-        this.googleBooksService = googleBooksService;
+    public BooksController(BookServiceImpl booksService) {
+        this.booksService = booksService;
+    }
+    @PostMapping("/{volumeId}/addReview")
+    public ResponseEntity<ReviewResponse> addReview(
+            @PathVariable String volumeId,
+            @RequestBody ReviewRequest request) {
+        request.setVolumeId(volumeId); // set the bookId from URL
+        ReviewResponse reviewResponse = booksService.addReview(request);
+        return ResponseEntity.ok(reviewResponse);
+    }
+    @DeleteMapping("/{volumeId}/removeReview/{reviewId}")
+    public ResponseEntity<String> removeReview(@PathVariable Long reviewId) {
+        booksService.removeReview(reviewId);
+        return ResponseEntity.ok("Review deleted successfully.");
     }
 
     @GetMapping("/search")
-    public ResponseEntity<GoogleBooksResponse> searchBooksByQuery(@RequestBody BooksSearchRequest request) {
-        GoogleBooksResponse response = googleBooksService.searchBooks(request);
+    public ResponseEntity<BooksResponse> searchBooksByQuery(@RequestBody BooksSearchRequest request) {
+        BooksResponse response = booksService.searchBooks(request);
 
         if (response.getItems() == null || response.getItems().isEmpty()) {
             return ResponseEntity.notFound().build();
@@ -28,10 +46,22 @@ public class GoogleBooksController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{bookId}")
-    public ResponseEntity<BookDetailsResponse> getBookById(@PathVariable String bookId) {
-        BookDetailsResponse bookResponse = googleBooksService.seeBook(bookId);
+    @GetMapping("/{volumeId}")
+    public ResponseEntity<BookWithReviewsResponse> getBookById(@PathVariable String volumeId) {
+        BookWithReviewsResponse bookResponse = booksService.getBookWithReviews(volumeId);
 
         return ResponseEntity.ok(bookResponse);
+    }
+    @PostMapping("/{volumeId}/add")
+    public ResponseEntity<?> addBookToLibrary(@PathVariable String volumeId) {
+
+        booksService.addBookToLibrary(volumeId);
+        return ResponseEntity.ok(Map.of("message", "Book added to your library."));
+    }
+
+    @DeleteMapping("/{volumeId}/remove")
+    public ResponseEntity<String> removeBookFromLibrary(@PathVariable String volumeId) {
+        booksService.removeBookFromLibrary(volumeId);
+        return ResponseEntity.ok("Book removed from your library.");
     }
 }

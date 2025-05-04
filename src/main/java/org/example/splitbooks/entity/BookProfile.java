@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 public class BookProfile {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long bookProfileId;
 
     @ManyToOne
     @JoinColumn(name = "book_id")
@@ -21,8 +21,6 @@ public class BookProfile {
     @JoinColumn(name = "profile_id")
     private Profile profile;
 
-    // Optionally store some extra data, like date added
     private LocalDateTime addedAt;
 
-    // Getters and setters
 }

@@ -10,4 +10,5 @@ public interface ProfileService {
 
     public ProfileSetupResponse setUpProfile(ProfileSetupRequest request);
     public ProfileResponse getProfile();
+
 }
