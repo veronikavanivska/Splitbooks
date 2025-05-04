@@ -37,4 +37,8 @@
         @OneToMany(mappedBy = "profile", cascade = CascadeType.ALL)
         private List<ReadingPreference> readingPreferences;
 
+
+        @OneToMany(mappedBy = "profile", cascade = CascadeType.ALL)
+        private List<BookProfile> bookProfiles;
+
     }
