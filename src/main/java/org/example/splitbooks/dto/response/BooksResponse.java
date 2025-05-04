@@ -10,10 +10,11 @@ public class GoogleBooksResponse {
     private int totalItems;
     private List<Item> items;
 
-
     @Data
     public static class Item {
+
         private String kind;
+        private String id;
         private String selfLink;
         private VolumeInfo volumeInfo;
     }
@@ -23,11 +24,8 @@ public class GoogleBooksResponse {
     public static class VolumeInfo {
         private String title;
         private List<String> authors;
-        private String publisher;
-        private String publishedDate;
-        private String description;
-        private String isbn;
         private ImageLinks imageLinks;
+        private String language;
     }
 
     @Data
@@ -35,4 +33,5 @@ public class GoogleBooksResponse {
         private String smallThumbnail;
         private String thumbnail;
     }
+
 }

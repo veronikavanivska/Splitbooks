@@ -1,6 +1,7 @@
 package org.example.splitbooks.controllers;
 
 import org.example.splitbooks.dto.request.BooksSearchRequest;
+import org.example.splitbooks.dto.response.BookDetailsResponse;
 import org.example.splitbooks.dto.response.GoogleBooksResponse;
 import org.example.splitbooks.services.impl.GoogleBookServiceImpl;
 import org.springframework.http.ResponseEntity;
@@ -20,13 +21,17 @@ public class GoogleBooksController {
     public ResponseEntity<GoogleBooksResponse> searchBooksByQuery(@RequestBody BooksSearchRequest request) {
         GoogleBooksResponse response = googleBooksService.searchBooks(request);
 
-        // If no books found, return a 404 Not Found response
         if (response.getItems() == null || response.getItems().isEmpty()) {
             return ResponseEntity.notFound().build();
         }
 
-        // Otherwise, return the found books with a 200 OK status
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/{bookId}")
+    public ResponseEntity<BookDetailsResponse> getBookById(@PathVariable String bookId) {
+        BookDetailsResponse bookResponse = googleBooksService.seeBook(bookId);
+
+        return ResponseEntity.ok(bookResponse);
+    }
 }

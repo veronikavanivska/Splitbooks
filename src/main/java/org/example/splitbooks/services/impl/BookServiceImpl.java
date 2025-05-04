@@ -1,6 +1,7 @@
 package org.example.splitbooks.services.impl;
 
 import org.example.splitbooks.dto.request.BooksSearchRequest;
+import org.example.splitbooks.dto.response.BookDetailsResponse;
 import org.example.splitbooks.dto.response.GoogleBooksResponse;
 import org.example.splitbooks.entity.SearchType;
 import org.example.splitbooks.services.GoogleBookService;
@@ -19,7 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
-public class GoogleBookServiceImpl implements GoogleBookService {
+public final class GoogleBookServiceImpl implements GoogleBookService {
 
     private final RestTemplate restTemplate;
     private static final Logger logger = LoggerFactory.getLogger(GoogleBookServiceImpl.class);
@@ -31,6 +32,21 @@ public class GoogleBookServiceImpl implements GoogleBookService {
 
     public GoogleBookServiceImpl(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
+    }
+
+    public BookDetailsResponse seeBook(String bookId){
+        String url = UriComponentsBuilder
+                .fromHttpUrl(GOOGLE_BOOKS_API_URL)
+                .pathSegment(bookId)
+                .queryParam("key", apiKey)
+                .queryParam("langRestrict", "en")
+                .toUriString();
+
+        BookDetailsResponse book = restTemplate.getForObject(url, BookDetailsResponse.class);
+        if (book != null) {
+            return book;
+        }
+        throw new RuntimeException("Book not found");
     }
 
 
@@ -63,9 +79,15 @@ public class GoogleBookServiceImpl implements GoogleBookService {
                 GoogleBooksResponse googleBooksResponse = response.getBody();
 
                 if (googleBooksResponse != null && googleBooksResponse.getItems() != null) {
-                    allItems.addAll(googleBooksResponse.getItems());
-                    totalItems = googleBooksResponse.getTotalItems(); // update from first response
+                    // Filter items to only include those explicitly marked as English
+                    List<GoogleBooksResponse.Item> englishItems = googleBooksResponse.getItems().stream()
+                            .filter(item -> item.getVolumeInfo() != null && "en".equalsIgnoreCase(item.getVolumeInfo().getLanguage()))
+                            .toList();
+
+                    allItems.addAll(englishItems);
+                    totalItems = googleBooksResponse.getTotalItems();
                     startIndex += maxResults;
+
                 } else {
                     break; // no more items
                 }
