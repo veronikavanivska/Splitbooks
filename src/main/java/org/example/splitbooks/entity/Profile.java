@@ -26,6 +26,8 @@
         private String username;
         private String avatarUrl;
 
+        private boolean setupCompleted;
+
         @ManyToMany
         @JoinTable(
                 name = "Profile_Genres",
@@ -43,6 +45,5 @@
 
         @OneToMany(mappedBy = "profile", cascade = CascadeType.ALL)
         private List<BookReview> reviews;
-
 
     }

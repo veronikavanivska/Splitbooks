@@ -40,18 +40,16 @@ public class ProfileController {
     }
 
     @PostMapping("/anonymous")
-    public ResponseEntity<Profile> createAnonymousProfile() {
-        Profile anonymousProfile = profileServiceImpl.createAnonymousProfile();
-        return ResponseEntity.ok(anonymousProfile);
+    public void createAnonymousProfile() {
+       profileServiceImpl.createAnonymousProfile();
     }
 
     @PatchMapping("/toggle")
     public ResponseEntity<String> toggleProfile() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        Long userId = Long.parseLong(authentication.getPrincipal().toString());
-
+//        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+//        Long userId = Long.parseLong(authentication.getPrincipal().toString());
         try {
-            profileServiceImpl.toggleActiveProfileType(userId);
+            profileServiceImpl.toggleActiveProfileType();
             return ResponseEntity.ok("Profile type switched successfully.");
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());

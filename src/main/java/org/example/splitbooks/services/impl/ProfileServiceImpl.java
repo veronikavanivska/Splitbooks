@@ -13,10 +13,6 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 
-
-//TODO: Rewrite the setup for public, change the check in which profile is user now!!!!!
-//TODO: Check this in another services too(write the clean code everywhere)
-
 @Service
 public class ProfileServiceImpl implements ProfileService {
 
@@ -40,10 +36,11 @@ public class ProfileServiceImpl implements ProfileService {
         this.readingFormatRepository = readingFormatRepository;
         this.readingPreferenceRepository = readingPreferenceRepository;
         this.userRepository = userRepository;
+
+
     }
-    public Profile createAnonymousProfile() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        Long userId = Long.parseLong(authentication.getPrincipal().toString());
+    public void createAnonymousProfile() {
+        Long userId = getAuthenticatedUserId();
 
         if (profileRepository.findByUser_UserIdAndType(userId, ProfileType.ANONYMOUS).isPresent()) {
             throw new RuntimeException("Anonymous profile already exists.");
@@ -56,25 +53,25 @@ public class ProfileServiceImpl implements ProfileService {
         anonymousProfile.setType(ProfileType.ANONYMOUS);
         anonymousProfile.setUser(publicProfile.getUser());
 
-        return profileRepository.save(anonymousProfile);
+        profileRepository.save(anonymousProfile);
+
+
     }
     public ProfileSetupResponse setUpProfile(ProfileSetupRequest request) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        System.out.println(authentication.getPrincipal());
-        Long userId = Long.parseLong(authentication.getPrincipal().toString());
-
-
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        Long userId = getAuthenticatedUserId();
+        User user = getUserById(userId);
 
         Profile profile = profileRepository.findByUser_UserIdAndType(userId, user.getActiveProfileType())
                 .orElseThrow(() -> new RuntimeException("Active profile not found"));
-
+        if (profile.isSetupCompleted()) {
+            throw new RuntimeException("This profile has already been set up.");
+        }
         if (profile.getType() == ProfileType.PUBLIC) {
             setupPublicProfile(profile, request);
+            profile.setSetupCompleted(true);
         } else if (profile.getType() == ProfileType.ANONYMOUS) {
             setupAnonymousProfile(profile, request);
+            profile.setSetupCompleted(true);
         }
         profileRepository.save(profile);
 
@@ -137,10 +134,12 @@ public class ProfileServiceImpl implements ProfileService {
     }
 
     public ProfileResponse getProfile() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        Long userId = Long.parseLong(authentication.getPrincipal().toString());
+        Long userId = getAuthenticatedUserId();
+        User user = getUserById(userId);
 
-        Profile profile = profileRepository.findByUser_UserId(userId);
+        Profile profile = profileRepository.findByUser_UserIdAndType(userId, user.getActiveProfileType())
+                .orElseThrow(() -> new RuntimeException("Active profile not found"));
+
         if (profile == null) throw new RuntimeException("Profile not found");
 
         ProfileResponse response = new ProfileResponse();
@@ -159,10 +158,11 @@ public class ProfileServiceImpl implements ProfileService {
         return response;
     }
 
-    public void toggleActiveProfileType(Long userId) {
+    public void toggleActiveProfileType() {
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        Long userId = getAuthenticatedUserId();
+        User user = getUserById(userId);
+
 
         ProfileType currentProfileType = user.getActiveProfileType();
 
@@ -178,5 +178,16 @@ public class ProfileServiceImpl implements ProfileService {
 
         user.setActiveProfileType(newProfileType);
         userRepository.save(user);
+    }
+
+
+    private Long getAuthenticatedUserId() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return Long.parseLong(auth.getPrincipal().toString());
+    }
+
+    private User getUserById(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
     }
 }

@@ -7,10 +7,7 @@ import org.example.splitbooks.dto.response.BookWithReviewsResponse;
 import org.example.splitbooks.dto.response.BooksResponse;
 import org.example.splitbooks.dto.response.ReviewResponse;
 import org.example.splitbooks.entity.*;
-import org.example.splitbooks.repositories.BookProfileRepository;
-import org.example.splitbooks.repositories.BookRepository;
-import org.example.splitbooks.repositories.BookReviewRepository;
-import org.example.splitbooks.repositories.ProfileRepository;
+import org.example.splitbooks.repositories.*;
 import org.example.splitbooks.services.BookService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +35,8 @@ public class BookServiceImpl implements BookService {
     private final BookProfileRepository bookProfileRepository;
     private final RestTemplate restTemplate;
     private final BookReviewRepository bookReviewRepository;
+    private final UserRepository userRepository;
+
     private static final Logger logger = LoggerFactory.getLogger(BookServiceImpl.class);
 
     @Value("${google.books.api.key}")
@@ -45,9 +44,10 @@ public class BookServiceImpl implements BookService {
 
     private static final String GOOGLE_BOOKS_API_URL = "https://www.googleapis.com/books/v1/volumes";
 
-    public BookServiceImpl(BookRepository bookRepository, ProfileRepository profileRepository,
+    public BookServiceImpl(UserRepository userRepository, BookRepository bookRepository, ProfileRepository profileRepository,
                            BookProfileRepository bookProfileRepository,BookReviewRepository bookReviewRepository,RestTemplate restTemplate) {
         this.bookRepository = bookRepository;
+        this.userRepository = userRepository;
         this.profileRepository = profileRepository;
         this.bookProfileRepository = bookProfileRepository;
         this.bookReviewRepository = bookReviewRepository;
@@ -68,6 +68,7 @@ public class BookServiceImpl implements BookService {
         }
         throw new RuntimeException("Book not found");
     }
+
     public BookWithReviewsResponse getBookWithReviews(String volumeId) {
         BookDetailsResponse bookDetails = showBook(volumeId);
 
@@ -90,11 +91,11 @@ public class BookServiceImpl implements BookService {
         return response;
     }
     public void addBookToLibrary(String volumeId) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        System.out.println(authentication.getPrincipal());
-        Long userId = Long.parseLong(authentication.getPrincipal().toString());
+        Long userId = getAuthenticatedUserId();
+        User user = getUserById(userId);
 
-        Profile profile = profileRepository.findByUser_UserId(userId);
+        Profile profile = profileRepository.findByUser_UserIdAndType(userId, user.getActiveProfileType())
+                .orElseThrow(() -> new RuntimeException("Active profile not found"));
 
         Book book = bookRepository.findByVolumeId(volumeId);
 
@@ -129,10 +130,12 @@ public class BookServiceImpl implements BookService {
     }
 
     public void removeBookFromLibrary(String volumeId) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        Long userId = Long.parseLong(authentication.getPrincipal().toString());
+        Long userId = getAuthenticatedUserId();
+        User user = getUserById(userId);
 
-        Profile profile = profileRepository.findByUser_UserId(userId);
+        Profile profile = profileRepository.findByUser_UserIdAndType(userId, user.getActiveProfileType())
+                .orElseThrow(() -> new RuntimeException("Active profile not found"));
+
         if (profile == null) {
             throw new RuntimeException("Profile not found for user");
         }
@@ -179,7 +182,6 @@ public class BookServiceImpl implements BookService {
                 BooksResponse googleBooksResponse = response.getBody();
 
                 if (googleBooksResponse != null && googleBooksResponse.getItems() != null) {
-                    // Filter items to only include those explicitly marked as English
                     List<BooksResponse.Item> englishItems = googleBooksResponse.getItems().stream()
                             .filter(item -> item.getVolumeInfo() != null && "en".equalsIgnoreCase(item.getVolumeInfo().getLanguage()))
                             .toList();
@@ -189,7 +191,7 @@ public class BookServiceImpl implements BookService {
                     startIndex += maxResults;
 
                 } else {
-                    break; // no more items
+                    break;
                 }
             } catch (Exception e) {
                 logger.error("Error fetching books from Google API", e);
@@ -200,14 +202,15 @@ public class BookServiceImpl implements BookService {
         BooksResponse result = new BooksResponse();
         result.setItems(allItems);
         result.setTotalItems(allItems.size());
-        result.setKind("books#volumes"); // optional
         return result;
     }
 
     public ReviewResponse addReview(ReviewRequest request) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        Long userId = Long.parseLong(authentication.getPrincipal().toString());
-        Profile profile = profileRepository.findByUser_UserId(userId);
+        Long userId = getAuthenticatedUserId();
+        User user = getUserById(userId);
+
+        Profile profile = profileRepository.findByUser_UserIdAndType(userId, user.getActiveProfileType())
+                .orElseThrow(() -> new RuntimeException("Active profile not found"));
 
         BookReview review = new BookReview();
         review.setVolumeId(request.getVolumeId());
@@ -230,15 +233,18 @@ public class BookServiceImpl implements BookService {
     }
 
     public void removeReview(Long reviewId) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        Long userId = Long.parseLong(authentication.getPrincipal().toString());
+        Long userId = getAuthenticatedUserId();
+        User user = getUserById(userId);
+
+        Profile profile = profileRepository.findByUser_UserIdAndType(userId, user.getActiveProfileType())
+                .orElseThrow(() -> new RuntimeException("Active profile not found"));
+
 
         BookReview review = bookReviewRepository.findById(reviewId)
                 .orElseThrow(() -> new RuntimeException("Review not found"));
 
-        Profile profile = review.getProfile();
 
-        if (!profile.getUser().getUserId().equals(userId)) {
+        if (!review.getProfile().getProfileid().equals(profile.getProfileid())) {
             throw new RuntimeException("You can only delete your own reviews.");
         }
 
@@ -271,5 +277,14 @@ public class BookServiceImpl implements BookService {
         }
     }
 
+    private Long getAuthenticatedUserId() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return Long.parseLong(auth.getPrincipal().toString());
+    }
+
+    private User getUserById(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
+    }
 
 }
