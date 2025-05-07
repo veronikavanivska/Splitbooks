@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/profile")
@@ -34,8 +35,9 @@ public class ProfileController {
     }
 
     @PostMapping("/setup")
-    public ResponseEntity<ProfileSetupResponse> setup(@RequestBody ProfileSetupRequest profileSetupRequest) {
-        ProfileSetupResponse profileSetupResponse = profileServiceImpl.setUpProfile(profileSetupRequest);
+    public ResponseEntity<ProfileSetupResponse> setup(  @RequestPart("data") ProfileSetupRequest request,
+                                                        @RequestPart("avatar") MultipartFile avatarFile ) {
+        ProfileSetupResponse profileSetupResponse = profileServiceImpl.setUpProfile(request, avatarFile);
         return ResponseEntity.ok(profileSetupResponse);
     }
 

@@ -9,6 +9,7 @@ import org.example.splitbooks.services.ProfileService;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +17,7 @@ import java.util.List;
 @Service
 public class ProfileServiceImpl implements ProfileService {
 
+    private final CloudinaryServiceImpl cloudinaryService;
     private final ProfileRepository profileRepository;
     private final GenreRepository genreRepository;
     private final LanguageRepository languageRepository;
@@ -29,7 +31,9 @@ public class ProfileServiceImpl implements ProfileService {
             GenreRepository genreRepository,
             LanguageRepository languageRepository,
             ReadingFormatRepository readingFormatRepository,
-            ReadingPreferenceRepository readingPreferenceRepository) {
+            ReadingPreferenceRepository readingPreferenceRepository,
+            CloudinaryServiceImpl cloudinaryService) {
+        this.cloudinaryService = cloudinaryService;
         this.profileRepository = profileRepository;
         this.genreRepository = genreRepository;
         this.languageRepository = languageRepository;
@@ -57,7 +61,7 @@ public class ProfileServiceImpl implements ProfileService {
 
 
     }
-    public ProfileSetupResponse setUpProfile(ProfileSetupRequest request) {
+    public ProfileSetupResponse setUpProfile(ProfileSetupRequest request, MultipartFile avatar) {
         Long userId = getAuthenticatedUserId();
         User user = getUserById(userId);
 
@@ -66,11 +70,14 @@ public class ProfileServiceImpl implements ProfileService {
         if (profile.isSetupCompleted()) {
             throw new RuntimeException("This profile has already been set up.");
         }
+
+        String avatarUrl = cloudinaryService.uploadAvatar(avatar);
+
         if (profile.getType() == ProfileType.PUBLIC) {
-            setupPublicProfile(profile, request);
+            setupPublicProfile(profile, request, avatarUrl);
             profile.setSetupCompleted(true);
         } else if (profile.getType() == ProfileType.ANONYMOUS) {
-            setupAnonymousProfile(profile, request);
+            setupAnonymousProfile(profile, request, avatarUrl);
             profile.setSetupCompleted(true);
         }
         profileRepository.save(profile);
@@ -79,19 +86,19 @@ public class ProfileServiceImpl implements ProfileService {
         response.setPhone(request.getPhone());
         response.setLastName(request.getLastName());
         response.setFirstName(request.getFirstName());
-        response.setAvatarUrl(request.getAvatarUrl());
         response.setPreferredFormat(request.getPreferredFormat());
         response.setPreferredLanguages(request.getPreferredLanguages());
         response.setSelectedGenres(request.getSelectedGenres());
-
+        response.setAvatarUrl(avatarUrl);
         return response;
     }
 
-    private void setupPublicProfile(Profile profile, ProfileSetupRequest request) {
+    private void setupPublicProfile(Profile profile, ProfileSetupRequest request, String avatarUrl ) {
+
         profile.setFirstName(request.getFirstName());
         profile.setLastName(request.getLastName());
         profile.setPhone(request.getPhone());
-        profile.setAvatarUrl(request.getAvatarUrl());
+        profile.setAvatarUrl(avatarUrl);
 
         List<Genre> selectedGenres = genreRepository.findByGenreIdIn(request.getSelectedGenres());
         profile.setFavoriteGenres(selectedGenres);
@@ -100,9 +107,9 @@ public class ProfileServiceImpl implements ProfileService {
         profile.setReadingPreferences(preferences);
     }
 
-    private void setupAnonymousProfile(Profile profile, ProfileSetupRequest request) {
+    private void setupAnonymousProfile(Profile profile, ProfileSetupRequest request, String avatarUrl ) {
         profile.setUsername(request.getAnonimousUsername());
-        profile.setAvatarUrl(request.getAvatarUrl());
+        profile.setAvatarUrl(avatarUrl);
 
         List<Genre> selectedGenres = genreRepository.findByGenreIdIn(request.getSelectedGenres());
         profile.setFavoriteGenres(selectedGenres);

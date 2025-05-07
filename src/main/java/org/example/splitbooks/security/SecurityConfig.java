@@ -1,5 +1,7 @@
 package org.example.splitbooks.security;
 
+import com.cloudinary.Cloudinary;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -22,6 +24,10 @@ public class SecurityConfig {
 
     private  JwtAuthenticationFilter jwtAuthenticationFilter;
 
+    @Value("${CLOUDINARY_URL}")
+    private String cloudinaryUrl;
+
+
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
@@ -36,6 +42,11 @@ public class SecurityConfig {
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    public Cloudinary cloudinary() {
+        return new Cloudinary(cloudinaryUrl);
     }
 
     @Bean

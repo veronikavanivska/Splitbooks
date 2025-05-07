@@ -12,7 +12,6 @@ public class ProfileSetupRequest {
     private List<Long> preferredLanguages;
     private String bio;
     private String phone;
-    private String avatarUrl;
     private String firstName;
     private String lastName;
     private String anonimousUsername;
