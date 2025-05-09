@@ -11,7 +11,7 @@
     public class Profile {
         @Id
         @GeneratedValue(strategy = GenerationType.IDENTITY)
-        private Long Profileid;
+        private Long profileId;
 
         @ManyToOne
         @JoinColumn(name = "user_id")
@@ -27,7 +27,6 @@
         private String avatarUrl;
 
         private boolean setupCompleted;
-
         @ManyToMany
         @JoinTable(
                 name = "Profile_Genres",
@@ -45,5 +44,12 @@
 
         @OneToMany(mappedBy = "profile", cascade = CascadeType.ALL)
         private List<BookReview> reviews;
+
+        @OneToMany(mappedBy = "follower", cascade = CascadeType.ALL, orphanRemoval = true)
+        private List<Follow> following;
+
+        @OneToMany(mappedBy = "following", cascade = CascadeType.ALL, orphanRemoval = true)
+        private List<Follow> followers;
+
 
     }

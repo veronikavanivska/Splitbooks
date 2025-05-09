@@ -8,6 +8,6 @@ import java.util.List;
 public interface GenreRepository extends JpaRepository<Genre, Long> {
     List<Genre> findAll();
 
-    List<Genre> findByGenreIdIn(List<Long> genreIds); // ✅ This is the correct Spring JPA syntax
+    List<Genre> findByGenreIdIn(List<Long> genreIds);
 
 }

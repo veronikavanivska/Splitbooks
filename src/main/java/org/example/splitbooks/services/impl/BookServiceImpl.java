@@ -26,6 +26,7 @@ import java.nio.file.AccessDeniedException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class BookServiceImpl implements BookService {
@@ -104,14 +105,24 @@ public class BookServiceImpl implements BookService {
 
             book = new Book();
             book.setVolumeId(volumeId);
-            book.setTitle(bookDetailsResponse.getVolumeInfo().getTitle());
-            book.setAuthor(bookDetailsResponse.getVolumeInfo().getAuthors().toString());
-            book.setDescription(bookDetailsResponse.getVolumeInfo().getDescription());
-            book.setImageUrl(bookDetailsResponse.getVolumeInfo().getImageLinks().getThumbnail());
-            book.setPageCount(bookDetailsResponse.getVolumeInfo().getPageCount());
-            book.setPublisher(bookDetailsResponse.getVolumeInfo().getPublisher());
-            book.setPublishedDate(bookDetailsResponse.getVolumeInfo().getPublishedDate());
+//            book.setTitle(bookDetailsResponse.getVolumeInfo().getTitle());
+//            book.setAuthor(bookDetailsResponse.getVolumeInfo().getAuthors().toString());
+//            book.setDescription(bookDetailsResponse.getVolumeInfo().getDescription());
+//            book.setImageUrl(bookDetailsResponse.getVolumeInfo().getImageLinks().getThumbnail());
+//            book.setPageCount(bookDetailsResponse.getVolumeInfo().getPageCount());
+//            book.setPublisher(bookDetailsResponse.getVolumeInfo().getPublisher());
+//            book.setPublishedDate(bookDetailsResponse.getVolumeInfo().getPublishedDate());
+            book.setTitle(getNullSafeString(bookDetailsResponse.getVolumeInfo().getTitle()));
+            book.setAuthor(getNullSafeString(bookDetailsResponse.getVolumeInfo().getAuthors().toString()));
+            book.setDescription(getNullSafeString(bookDetailsResponse.getVolumeInfo().getDescription()));
+            book.setImageUrl(getNullSafeString(bookDetailsResponse.getVolumeInfo().getImageLinks().getThumbnail()));
 
+            // Handle pageCount as Integer (can be null or valid number)
+            Integer pageCount = bookDetailsResponse.getVolumeInfo().getPageCount();
+            int pageCountValue = (pageCount != null) ? pageCount.intValue() : 0;  // PageCount can remain null
+            book.setPageCount(pageCountValue);
+            book.setPublisher(getNullSafeString(bookDetailsResponse.getVolumeInfo().getPublisher()));
+            book.setPublishedDate(getNullSafeString(bookDetailsResponse.getVolumeInfo().getPublishedDate()));
             bookRepository.save(book);
         }
 
@@ -128,7 +139,9 @@ public class BookServiceImpl implements BookService {
             throw new RuntimeException("This book is already in your library.");
         }
     }
-
+    private String getNullSafeString(String value) {
+        return value != null ? value : "null";  // Return "null" string if the value is null
+    }
     public void removeBookFromLibrary(String volumeId) {
         Long userId = getAuthenticatedUserId();
         User user = getUserById(userId);
@@ -244,7 +257,7 @@ public class BookServiceImpl implements BookService {
                 .orElseThrow(() -> new RuntimeException("Review not found"));
 
 
-        if (!review.getProfile().getProfileid().equals(profile.getProfileid())) {
+        if (!review.getProfile().getProfileId().equals(profile.getProfileId())) {
             throw new RuntimeException("You can only delete your own reviews.");
         }
 

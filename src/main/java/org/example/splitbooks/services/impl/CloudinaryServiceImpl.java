@@ -2,6 +2,7 @@ package org.example.splitbooks.services.impl;
 
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
+import org.example.splitbooks.services.CloudinaryService;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -9,7 +10,7 @@ import java.io.IOException;
 import java.util.Map;
 
 @Service
-public class CloudinaryServiceImpl {
+public class CloudinaryServiceImpl implements CloudinaryService {
 
         private final Cloudinary cloudinary;
 
@@ -28,5 +29,25 @@ public class CloudinaryServiceImpl {
                 throw new RuntimeException("Failed to upload avatar to Cloudinary", e);
             }
         }
-    }
+
+        public void deleteAvatarByUrl(String secureUrl) {
+            try {
+                String publicId = extractPublicId(secureUrl);
+                cloudinary.uploader().destroy(publicId, ObjectUtils.asMap(
+                        "resource_type", "image"
+                ));
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to delete avatar from Cloudinary", e);
+            }
+        }
+
+        private String extractPublicId(String secureUrl) {
+            int lastSlash = secureUrl.lastIndexOf('/');
+            int dot = secureUrl.lastIndexOf('.');
+            String filename = secureUrl.substring(lastSlash + 1, dot);
+            return "avatars/" + filename;
+        }
+
+
+}
 

@@ -1,5 +1,8 @@
 package org.example.splitbooks.services.impl;
 
+import org.example.splitbooks.dto.request.EditGenresRequest;
+import org.example.splitbooks.dto.request.EditPreferencesRequest;
+import org.example.splitbooks.dto.request.EditProfileRequest;
 import org.example.splitbooks.dto.request.ProfileSetupRequest;
 import org.example.splitbooks.dto.response.ProfileResponse;
 import org.example.splitbooks.dto.response.ProfileSetupResponse;
@@ -13,6 +16,12 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
+
+
+
+//TODO make following and follows also implements the friendship suggestion
+//TODO: make it like a quotes with swiping
+
 
 @Service
 public class ProfileServiceImpl implements ProfileService {
@@ -185,6 +194,93 @@ public class ProfileServiceImpl implements ProfileService {
 
         user.setActiveProfileType(newProfileType);
         userRepository.save(user);
+    }
+
+    public void editProfile(EditProfileRequest request, MultipartFile avatar) {
+        Long userId = getAuthenticatedUserId();
+        User user = getUserById(userId);
+
+        Profile profile = profileRepository.findByUser_UserIdAndType(userId, user.getActiveProfileType())
+                .orElseThrow(() -> new RuntimeException("Active profile not found"));
+
+        if (profile.getType() == ProfileType.PUBLIC) {
+            if (request.getFirstName() != null && !request.getFirstName().isEmpty())  profile.setFirstName(request.getFirstName());
+            if (request.getLastName() != null) profile.setLastName(request.getLastName());
+            if (request.getPhone() != null) profile.setPhone(request.getPhone());
+        }
+
+
+        if (request.getUsername() != null && !profile.getUsername().equals(request.getUsername())) {
+            if (profileRepository.existsByUsername(request.getUsername())) {
+                throw new RuntimeException("Username is already taken. Please choose a different one.");
+            }
+
+            profile.setUsername(request.getUsername());
+        }
+        if (avatar != null && !avatar.isEmpty()) {
+            cloudinaryService.deleteAvatarByUrl(profile.getAvatarUrl());
+            String newAvatar = cloudinaryService.uploadAvatar(avatar);
+            profile.setAvatarUrl(newAvatar);
+        }
+        profileRepository.save(profile);
+    }
+
+    public void editGenres(EditGenresRequest request) {
+        Long userId = getAuthenticatedUserId();
+        User user = getUserById(userId);
+
+        Profile profile = profileRepository.findByUser_UserIdAndType(userId, user.getActiveProfileType())
+                .orElseThrow(() -> new RuntimeException("Active profile not found"));
+
+        List<Genre> newGenres = genreRepository.findByGenreIdIn(request.getSelectedGenres());
+
+
+        profile.setFavoriteGenres(newGenres);
+
+        profileRepository.save(profile);
+    }
+
+    public void editReadingPreferences(EditPreferencesRequest request) {
+        Long userId = getAuthenticatedUserId();
+        User user = getUserById(userId);
+
+        Profile profile = profileRepository.findByUser_UserIdAndType(userId, user.getActiveProfileType())
+                .orElseThrow(() -> new RuntimeException("Active profile not found"));
+
+        List<ReadingPreference> currentPreferences = new ArrayList<>(profile.getReadingPreferences());
+
+        currentPreferences.stream()
+                .filter(pref -> !request.getPreferredLanguages().contains(pref.getLanguage().getLanguageId()) ||
+                        !request.getPreferredFormats().contains(pref.getFormat().getFormatId()))
+                .forEach(pref -> {
+                    profile.getReadingPreferences().remove(pref);
+                    readingPreferenceRepository.delete(pref);
+                });
+
+        for (Long formatId : request.getPreferredFormats()) {
+            ReadingFormat format = readingFormatRepository.findById(formatId)
+                    .orElseThrow(() -> new RuntimeException("Format not found"));
+
+            for (Long langId : request.getPreferredLanguages()) {
+                Language language = languageRepository.findById(langId)
+                        .orElseThrow(() -> new RuntimeException("Language not found"));
+
+                boolean alreadyExists = profile.getReadingPreferences().stream()
+                        .anyMatch(p -> p.getLanguage().getLanguageId().equals(langId)
+                                && p.getFormat().getFormatId().equals(formatId));
+
+                if (!alreadyExists) {
+                    ReadingPreference pref = new ReadingPreference();
+                    pref.setFormat(format);
+                    pref.setLanguage(language);
+                    pref.setProfile(profile);
+
+                    profile.getReadingPreferences().add(pref);
+                }
+            }
+        }
+
+        profileRepository.save(profile);
     }
 
 
