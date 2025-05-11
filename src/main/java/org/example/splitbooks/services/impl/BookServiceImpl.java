@@ -105,21 +105,13 @@ public class BookServiceImpl implements BookService {
 
             book = new Book();
             book.setVolumeId(volumeId);
-//            book.setTitle(bookDetailsResponse.getVolumeInfo().getTitle());
-//            book.setAuthor(bookDetailsResponse.getVolumeInfo().getAuthors().toString());
-//            book.setDescription(bookDetailsResponse.getVolumeInfo().getDescription());
-//            book.setImageUrl(bookDetailsResponse.getVolumeInfo().getImageLinks().getThumbnail());
-//            book.setPageCount(bookDetailsResponse.getVolumeInfo().getPageCount());
-//            book.setPublisher(bookDetailsResponse.getVolumeInfo().getPublisher());
-//            book.setPublishedDate(bookDetailsResponse.getVolumeInfo().getPublishedDate());
             book.setTitle(getNullSafeString(bookDetailsResponse.getVolumeInfo().getTitle()));
             book.setAuthor(getNullSafeString(bookDetailsResponse.getVolumeInfo().getAuthors().toString()));
             book.setDescription(getNullSafeString(bookDetailsResponse.getVolumeInfo().getDescription()));
             book.setImageUrl(getNullSafeString(bookDetailsResponse.getVolumeInfo().getImageLinks().getThumbnail()));
 
-            // Handle pageCount as Integer (can be null or valid number)
             Integer pageCount = bookDetailsResponse.getVolumeInfo().getPageCount();
-            int pageCountValue = (pageCount != null) ? pageCount.intValue() : 0;  // PageCount can remain null
+            int pageCountValue = (pageCount != null) ? pageCount.intValue() : 0;
             book.setPageCount(pageCountValue);
             book.setPublisher(getNullSafeString(bookDetailsResponse.getVolumeInfo().getPublisher()));
             book.setPublishedDate(getNullSafeString(bookDetailsResponse.getVolumeInfo().getPublishedDate()));

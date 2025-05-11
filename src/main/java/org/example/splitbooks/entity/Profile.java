@@ -27,6 +27,8 @@
         private String avatarUrl;
 
         private boolean setupCompleted;
+        private boolean isRegisteredInGame = false;
+
         @ManyToMany
         @JoinTable(
                 name = "Profile_Genres",
@@ -52,4 +54,14 @@
         private List<Follow> followers;
 
 
+        // Relationship with QuoteSwipe
+        @OneToMany(mappedBy = "swiper", cascade = CascadeType.ALL)
+        private List<QuoteSwipe> swipes;
+
+        // Relationship with QuoteMatch
+        @OneToMany(mappedBy = "profile1", cascade = CascadeType.ALL)
+        private List<QuoteMatch> matchesAsProfile1;
+
+        @OneToMany(mappedBy = "profile2", cascade = CascadeType.ALL)
+        private List<QuoteMatch> matchesAsProfile2;
     }
