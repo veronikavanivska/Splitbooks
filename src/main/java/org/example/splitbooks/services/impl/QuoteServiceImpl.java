@@ -110,6 +110,7 @@ public class QuoteServiceImpl {
 
         return swipeCards;
     }
+
     public void swipe(Long targetProfileId, boolean liked) {
         Long userId = getAuthenticatedUserId();
         User user = getUserById(userId);
@@ -176,7 +177,6 @@ public class QuoteServiceImpl {
 
         return incomingCards;
     }
-
 
     private Long getAuthenticatedUserId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
