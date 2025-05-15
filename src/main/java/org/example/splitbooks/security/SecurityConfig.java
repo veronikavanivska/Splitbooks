@@ -36,13 +36,14 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.csrf().disable()
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll() // Allow login/register
+                        .requestMatchers("/api/auth/**", "/ws/**" ).permitAll()// Allow login/register
                         .anyRequest().authenticated() // Any other must be logged
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
+
 
     @Bean
     public Cloudinary cloudinary() {

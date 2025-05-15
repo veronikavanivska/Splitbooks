@@ -6,6 +6,7 @@ import org.example.splitbooks.dto.response.QuoteSetResponse;
 import org.example.splitbooks.dto.response.ShortProfileResponse;
 import org.example.splitbooks.entity.*;
 import org.example.splitbooks.repositories.*;
+import org.example.splitbooks.services.QuoteService;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -17,7 +18,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
-public class QuoteServiceImpl {
+public class QuoteServiceImpl implements QuoteService {
 
     private final UserRepository userRepository;
     private final ProfileRepository profileRepository;
@@ -25,12 +26,14 @@ public class QuoteServiceImpl {
     private final FriendSuggestionServiceImpl friendSuggestionService;
     private final QuoteSwipeRepository quoteSwipeRepository;
     private final QuoteMatchRepository quoteMatchRepository;
+    private final NotificationServiceImpl notificationService;
 
-    public QuoteServiceImpl(UserRepository userRepository, ProfileRepository profileRepository, QuoteMatchRepository quoteMatchRepository, QuoteSwipeRepository quoteSwipeRepository, QuoteSetRepository quoteSetRepository, FriendSuggestionServiceImpl friendSuggestionService) {
+    public QuoteServiceImpl(UserRepository userRepository, NotificationServiceImpl notificationService,ProfileRepository profileRepository, QuoteMatchRepository quoteMatchRepository, QuoteSwipeRepository quoteSwipeRepository, QuoteSetRepository quoteSetRepository, FriendSuggestionServiceImpl friendSuggestionService) {
         this.userRepository = userRepository;
         this.friendSuggestionService = friendSuggestionService;
         this.quoteSwipeRepository = quoteSwipeRepository;
         this.quoteSetRepository = quoteSetRepository;
+        this.notificationService = notificationService;
         this.profileRepository = profileRepository;
         this.quoteMatchRepository = quoteMatchRepository;
     }
@@ -127,6 +130,9 @@ public class QuoteServiceImpl {
         swipe.setLiked(liked);
         quoteSwipeRepository.save(swipe);
 
+        String message = "Someone liked your quotes";
+        notificationService.createAndSend(target, message, NotificationType.SWIPE);
+
         if (liked) {
             Optional<QuoteSwipe> reverseSwipe = quoteSwipeRepository.findBySwiperProfileIdAndTargetProfileId(targetProfileId, profile.getProfileId());
 
@@ -137,6 +143,9 @@ public class QuoteServiceImpl {
                 match.setProfile2(target);
                 quoteMatchRepository.save(match);
 
+                String matchMessage = "It is a match!";
+                notificationService.createAndSend(target, matchMessage, NotificationType.MATCH);
+                notificationService.createAndSend(profile, matchMessage, NotificationType.MATCH);
             }
         }
     }

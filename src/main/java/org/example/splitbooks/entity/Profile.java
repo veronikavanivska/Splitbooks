@@ -28,6 +28,7 @@
 
         private boolean setupCompleted;
         private boolean isRegisteredInGame = false;
+        private boolean notificationsEnabled = true;
 
         @ManyToMany
         @JoinTable(
@@ -53,12 +54,9 @@
         @OneToMany(mappedBy = "following", cascade = CascadeType.ALL, orphanRemoval = true)
         private List<Follow> followers;
 
-
-        // Relationship with QuoteSwipe
         @OneToMany(mappedBy = "swiper", cascade = CascadeType.ALL)
         private List<QuoteSwipe> swipes;
 
-        // Relationship with QuoteMatch
         @OneToMany(mappedBy = "profile1", cascade = CascadeType.ALL)
         private List<QuoteMatch> matchesAsProfile1;
 

@@ -12,4 +12,5 @@ public class ReviewResponse {
     private int rating;
     private String username;
     private LocalDateTime createdAt;
+    private Long parentReviewId;
 }

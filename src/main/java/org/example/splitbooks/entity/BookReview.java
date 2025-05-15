@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Data
@@ -21,6 +23,14 @@ public class BookReview {
 
     private String reviewText;
     private int rating;
+
+    @ManyToOne
+    @JoinColumn(name = "parent_id")
+    private BookReview parent;
+
+
+    @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<BookReview> replies = new ArrayList<>();
 
     private LocalDateTime createdAt;
 

@@ -1,10 +1,7 @@
 package org.example.splitbooks.controllers;
 
 
-import org.example.splitbooks.dto.request.EditGenresRequest;
-import org.example.splitbooks.dto.request.EditPreferencesRequest;
-import org.example.splitbooks.dto.request.EditProfileRequest;
-import org.example.splitbooks.dto.request.ProfileSetupRequest;
+import org.example.splitbooks.dto.request.*;
 import org.example.splitbooks.dto.response.ProfileResponse;
 import org.example.splitbooks.dto.response.ProfileSetupResponse;
 import org.example.splitbooks.services.impl.ProfileServiceImpl;
@@ -74,5 +71,11 @@ public class ProfileController {
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
+    }
+
+    @PatchMapping("/edit/notifications")
+    public ResponseEntity<String> editNotifications(@RequestBody NotificationEnableRequest request) {
+        profileServiceImpl.enableNotifications(request);
+        return ResponseEntity.ok("Notification toggle successfully.");
     }
 }

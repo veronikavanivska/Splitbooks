@@ -7,4 +7,5 @@ public class ReviewRequest {
     private String volumeId;
     private String reviewText;
     private int rating;
+    private Long parentReviewId;
 }

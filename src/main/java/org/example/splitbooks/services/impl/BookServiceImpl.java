@@ -83,6 +83,8 @@ public class BookServiceImpl implements BookService {
             response.setReviewText(review.getReviewText());
             response.setRating(review.getRating());
             response.setCreatedAt(review.getCreatedAt());
+//            if(review.getParent().getBookReviewId() != null)
+//                response.setParentReviewId(review.getParent().getBookReviewId());
             return response;
         }).toList();
 
@@ -224,6 +226,13 @@ public class BookServiceImpl implements BookService {
         review.setRating(request.getRating());
         review.setCreatedAt(LocalDateTime.now());
 
+        if (request.getParentReviewId() != null) {
+            BookReview parent = bookReviewRepository.findById(request.getParentReviewId())
+                    .orElseThrow(() -> new RuntimeException("Parent review not found"));
+            review.setParent(parent);
+
+        }
+
         BookReview savedReview = bookReviewRepository.save(review);
 
         ReviewResponse response = new ReviewResponse();
@@ -233,6 +242,12 @@ public class BookServiceImpl implements BookService {
         response.setRating(savedReview.getRating());
         response.setCreatedAt(savedReview.getCreatedAt());
         response.setUsername(savedReview.getProfile().getUsername());
+        if(request.getParentReviewId() != null) {
+            BookReview parent = bookReviewRepository.findById(request.getParentReviewId())
+                    .orElseThrow(() -> new RuntimeException("Parent review not found"));
+            response.setParentReviewId(parent.getParent().getBookReviewId());
+            System.out.println(parent.getParent().getBookReviewId());
+        }
 
         return response;
     }

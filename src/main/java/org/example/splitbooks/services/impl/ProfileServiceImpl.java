@@ -1,9 +1,6 @@
 package org.example.splitbooks.services.impl;
 
-import org.example.splitbooks.dto.request.EditGenresRequest;
-import org.example.splitbooks.dto.request.EditPreferencesRequest;
-import org.example.splitbooks.dto.request.EditProfileRequest;
-import org.example.splitbooks.dto.request.ProfileSetupRequest;
+import org.example.splitbooks.dto.request.*;
 import org.example.splitbooks.dto.response.ProfileResponse;
 import org.example.splitbooks.dto.response.ProfileSetupResponse;
 import org.example.splitbooks.entity.*;
@@ -237,6 +234,17 @@ public class ProfileServiceImpl implements ProfileService {
 
         profile.setFavoriteGenres(newGenres);
 
+        profileRepository.save(profile);
+    }
+
+
+    public void enableNotifications(NotificationEnableRequest request) {
+        Long userId = getAuthenticatedUserId();
+        User user = getUserById(userId);
+
+        Profile profile = profileRepository.findByUser_UserIdAndType(userId, user.getActiveProfileType()).orElseThrow(() -> new RuntimeException("Active profile not found"));
+
+        profile.setNotificationsEnabled(request.isEnable());
         profileRepository.save(profile);
     }
 
