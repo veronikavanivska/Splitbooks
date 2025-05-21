@@ -24,9 +24,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AccessDeniedException;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class BookServiceImpl implements BookService {
@@ -74,8 +72,13 @@ public class BookServiceImpl implements BookService {
         BookDetailsResponse bookDetails = showBook(volumeId);
 
         List<BookReview> reviewEntities = bookReviewRepository.findByVolumeId(volumeId);
+        System.out.println("Found " + reviewEntities.size() + " reviews");
 
-        List<ReviewResponse> reviewResponses = reviewEntities.stream().map(review -> {
+        // Step 1: Convert all BookReview entities to DTOs
+        Map<Long, ReviewResponse> responseMap = new HashMap<>();
+        List<ReviewResponse> topLevelReviews = new ArrayList<>();
+
+        for (BookReview review : reviewEntities) {
             ReviewResponse response = new ReviewResponse();
             response.setReviewId(review.getBookReviewId());
             response.setVolumeId(review.getVolumeId());
@@ -84,12 +87,38 @@ public class BookServiceImpl implements BookService {
             response.setRating(review.getRating());
             response.setCreatedAt(review.getCreatedAt());
 
-            return response;
-        }).toList();
+            if (review.getParent() != null) {
+                response.setParentReviewId(review.getParent().getBookReviewId());
+            }
+
+            responseMap.put(review.getBookReviewId(), response);
+        }
+
+        // Step 2: Link replies to parents
+        for (BookReview review : reviewEntities) {
+            ReviewResponse current = responseMap.get(review.getBookReviewId());
+
+            if (review.getParent() != null) {
+                Long parentId = review.getParent().getBookReviewId();
+                ReviewResponse parent = responseMap.get(parentId);
+                if (parent != null) {
+                    parent.getReplies().add(current);
+                } else {
+                    // parent not found — treat as top-level just in case
+                    topLevelReviews.add(current);
+                }
+            } else {
+                // top-level review
+                topLevelReviews.add(current);
+            }
+        }
+
+        System.out.println("Top-level reviews count: " + topLevelReviews.size());
 
         BookWithReviewsResponse response = new BookWithReviewsResponse();
         response.setBook(bookDetails);
-        response.setReviews(reviewResponses);
+        response.setReviews(topLevelReviews);
+
         return response;
     }
     public void addBookToLibrary(String volumeId) {
@@ -241,12 +270,12 @@ public class BookServiceImpl implements BookService {
         response.setRating(savedReview.getRating());
         response.setCreatedAt(savedReview.getCreatedAt());
         response.setUsername(savedReview.getProfile().getUsername());
-//        if(request.getParentReviewId() != null) {
-//            BookReview parent = bookReviewRepository.findById(request.getParentReviewId())
-//                    .orElseThrow(() -> new RuntimeException("Parent review not found"));
-//            response.setParentReviewId(parent.getParent().getBookReviewId());
-//            System.out.println(parent.getParent().getBookReviewId());
-//        }
+        if(request.getParentReviewId() != null) {
+            BookReview parent = bookReviewRepository.findById(request.getParentReviewId())
+                    .orElseThrow(() -> new RuntimeException("Parent review not found"));
+            response.setParentReviewId(parent.getParent().getBookReviewId());
+            System.out.println(parent.getParent().getBookReviewId());
+        }
 
         return response;
     }

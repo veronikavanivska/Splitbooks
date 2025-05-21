@@ -3,6 +3,8 @@ package org.example.splitbooks.dto.response;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 public class ReviewResponse {
@@ -13,4 +15,6 @@ public class ReviewResponse {
     private String username;
     private LocalDateTime createdAt;
     private Long parentReviewId;
+
+    private List<ReviewResponse> replies = new ArrayList<>();
 }
