@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 public interface BookService {
-    public BooksResponse searchBooks(BooksSearchRequest request);
+    public BooksResponse searchBooks(BooksSearchRequest request, int start, int limit);
     public BookDetailsResponse showBook(String bookId);
     public BookWithReviewsResponse getBookWithReviews(String volumeId);
     public void addBookToLibrary(String volumeId);

@@ -74,7 +74,7 @@ public class BookServiceImpl implements BookService {
         List<BookReview> reviewEntities = bookReviewRepository.findByVolumeId(volumeId);
         System.out.println("Found " + reviewEntities.size() + " reviews");
 
-        // Step 1: Convert all BookReview entities to DTOs
+
         Map<Long, ReviewResponse> responseMap = new HashMap<>();
         List<ReviewResponse> topLevelReviews = new ArrayList<>();
 
@@ -94,7 +94,6 @@ public class BookServiceImpl implements BookService {
             responseMap.put(review.getBookReviewId(), response);
         }
 
-        // Step 2: Link replies to parents
         for (BookReview review : reviewEntities) {
             ReviewResponse current = responseMap.get(review.getBookReviewId());
 
@@ -104,11 +103,9 @@ public class BookServiceImpl implements BookService {
                 if (parent != null) {
                     parent.getReplies().add(current);
                 } else {
-                    // parent not found — treat as top-level just in case
                     topLevelReviews.add(current);
                 }
             } else {
-                // top-level review
                 topLevelReviews.add(current);
             }
         }
@@ -162,7 +159,7 @@ public class BookServiceImpl implements BookService {
         }
     }
     private String getNullSafeString(String value) {
-        return value != null ? value : "null";  // Return "null" string if the value is null
+        return value != null ? value : "null";
     }
     public void removeBookFromLibrary(String volumeId) {
         Long userId = getAuthenticatedUserId();
@@ -188,57 +185,49 @@ public class BookServiceImpl implements BookService {
         bookProfileRepository.delete(bookProfile);
     }
 
-    public BooksResponse searchBooks(BooksSearchRequest request) {
-        String query = buildQuery(request);
+public BooksResponse searchBooks(BooksSearchRequest request, int startIndex, int maxResults) {
+    String query = buildQuery(request);
 
-        if (query == null || query.isBlank()) {
-            throw new IllegalArgumentException("Search query cannot be empty");
+    if (query == null || query.isBlank()) {
+        throw new IllegalArgumentException("Search query cannot be empty");
+    }
+
+    String url = UriComponentsBuilder
+            .fromHttpUrl(GOOGLE_BOOKS_API_URL)
+            .queryParam("q", query)
+            .queryParam("startIndex", startIndex)
+            .queryParam("maxResults", maxResults)
+            .queryParam("key", apiKey)
+            .toUriString();
+
+    logger.info("Google Books API request: {}", url);
+
+    try {
+        ResponseEntity<BooksResponse> response = restTemplate.getForEntity(url, BooksResponse.class);
+        BooksResponse googleBooksResponse = response.getBody();
+
+        if (googleBooksResponse == null || googleBooksResponse.getItems() == null) {
+            BooksResponse empty = new BooksResponse();
+            empty.setItems(Collections.emptyList());
+            empty.setTotalItems(0);
+            return empty;
         }
 
-        List<BooksResponse.Item> allItems = new ArrayList<>();
-        int startIndex = 0;
-        int maxResults = 40;
-        int totalItems = Integer.MAX_VALUE;
-
-        while (startIndex < totalItems) {
-            String url = UriComponentsBuilder
-                    .fromHttpUrl(GOOGLE_BOOKS_API_URL)
-                    .queryParam("q", query)
-                    .queryParam("startIndex", startIndex)
-                    .queryParam("maxResults", maxResults)
-                    .queryParam("key", apiKey)
-                    .toUriString();
-
-            logger.info("Google Books API request: {}", url);
-
-            try {
-                ResponseEntity<BooksResponse> response =
-                        restTemplate.getForEntity(url, BooksResponse.class);
-                BooksResponse googleBooksResponse = response.getBody();
-
-                if (googleBooksResponse != null && googleBooksResponse.getItems() != null) {
-                    List<BooksResponse.Item> englishItems = googleBooksResponse.getItems().stream()
-                            .filter(item -> item.getVolumeInfo() != null && "en".equalsIgnoreCase(item.getVolumeInfo().getLanguage()))
-                            .toList();
-
-                    allItems.addAll(englishItems);
-                    totalItems = googleBooksResponse.getTotalItems();
-                    startIndex += maxResults;
-
-                } else {
-                    break;
-                }
-            } catch (Exception e) {
-                logger.error("Error fetching books from Google API", e);
-                throw new RuntimeException("Failed to fetch books from Google API", e);
-            }
-        }
+        List<BooksResponse.Item> englishItems = googleBooksResponse.getItems().stream()
+                .filter(item -> item.getVolumeInfo() != null && "en".equalsIgnoreCase(item.getVolumeInfo().getLanguage()))
+                .toList();
 
         BooksResponse result = new BooksResponse();
-        result.setItems(allItems);
-        result.setTotalItems(allItems.size());
+        result.setItems(englishItems);
+        result.setTotalItems(englishItems.size());
         return result;
+
+    } catch (Exception e) {
+        logger.error("Error fetching books from Google API", e);
+        throw new RuntimeException("Failed to fetch books from Google API", e);
     }
+}
+
 
     public ReviewResponse addReview(ReviewRequest request) {
         Long userId = getAuthenticatedUserId();

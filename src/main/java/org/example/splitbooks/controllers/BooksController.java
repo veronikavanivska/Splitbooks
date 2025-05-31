@@ -25,7 +25,7 @@ public class BooksController {
     public ResponseEntity<ReviewResponse> addReview(
             @PathVariable String volumeId,
             @RequestBody ReviewRequest request) {
-        request.setVolumeId(volumeId); // set the bookId from URL
+        request.setVolumeId(volumeId);
         ReviewResponse reviewResponse = booksService.addReview(request);
         return ResponseEntity.ok(reviewResponse);
     }
@@ -36,13 +36,13 @@ public class BooksController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<BooksResponse> searchBooksByQuery(@RequestBody BooksSearchRequest request) {
-        BooksResponse response = booksService.searchBooks(request);
+    public ResponseEntity<BooksResponse> getBooks(
+            @RequestBody BooksSearchRequest request,
+            @RequestParam(defaultValue = "0") int startIndex,
+            @RequestParam(defaultValue = "20") int maxResults
+    ) {
 
-        if (response.getItems() == null || response.getItems().isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-
+        BooksResponse response = booksService.searchBooks(request, startIndex, maxResults);
         return ResponseEntity.ok(response);
     }
 
