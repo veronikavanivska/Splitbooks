@@ -1,5 +1,6 @@
 package org.example.splitbooks.services.impl;
 
+import org.example.splitbooks.dto.request.CreatePrivateChatRequest;
 import org.example.splitbooks.dto.request.QuoteRegisterRequest;
 import org.example.splitbooks.dto.response.QuoteRegisterResponse;
 import org.example.splitbooks.dto.response.QuoteSetResponse;
@@ -27,8 +28,9 @@ public class QuoteServiceImpl implements QuoteService {
     private final QuoteSwipeRepository quoteSwipeRepository;
     private final QuoteMatchRepository quoteMatchRepository;
     private final NotificationServiceImpl notificationService;
+    private final ChatServiceImpl chatService;
 
-    public QuoteServiceImpl(UserRepository userRepository, NotificationServiceImpl notificationService,ProfileRepository profileRepository, QuoteMatchRepository quoteMatchRepository, QuoteSwipeRepository quoteSwipeRepository, QuoteSetRepository quoteSetRepository, FriendSuggestionServiceImpl friendSuggestionService) {
+    public QuoteServiceImpl(UserRepository userRepository, ChatServiceImpl chatService,NotificationServiceImpl notificationService,ProfileRepository profileRepository, QuoteMatchRepository quoteMatchRepository, QuoteSwipeRepository quoteSwipeRepository, QuoteSetRepository quoteSetRepository, FriendSuggestionServiceImpl friendSuggestionService) {
         this.userRepository = userRepository;
         this.friendSuggestionService = friendSuggestionService;
         this.quoteSwipeRepository = quoteSwipeRepository;
@@ -36,6 +38,7 @@ public class QuoteServiceImpl implements QuoteService {
         this.notificationService = notificationService;
         this.profileRepository = profileRepository;
         this.quoteMatchRepository = quoteMatchRepository;
+        this.chatService = chatService;
     }
 
     public QuoteRegisterResponse registerQuote(QuoteRegisterRequest quoteRegisterRequest) {
@@ -146,6 +149,10 @@ public class QuoteServiceImpl implements QuoteService {
                 String matchMessage = "It is a match!";
                 notificationService.createAndSend(target, matchMessage, NotificationType.MATCH);
                 notificationService.createAndSend(profile, matchMessage, NotificationType.MATCH);
+
+                CreatePrivateChatRequest chatRequest = new CreatePrivateChatRequest();
+                chatRequest.setOtherParticipantId(target.getProfileId());
+                chatService.createPrivateChat(chatRequest);
             }
         }
     }
