@@ -98,11 +98,11 @@ public class MessagingServiceImpl {
         return sendMessageResponse;
     }
 
-    public PageResponse<SendMessageResponse> getAllMessages(Long chatId, int page, int size) {
+    public PageResponse<SendMessageResponse> getAllMessages(Long chatId,Pageable pageable) {
         Chat chat = chatRepository.findById(chatId)
                 .orElseThrow(() -> new RuntimeException("Chat not found"));
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by("timestamp").ascending());
+
         Page<Message> messages = messageRepository.findByChat(chat, pageable);
 
         Page<SendMessageResponse> dtoPage = messages.map(message -> {
