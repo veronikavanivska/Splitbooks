@@ -3,16 +3,23 @@ package org.example.splitbooks.services.impl;
 import org.example.splitbooks.dto.request.CreateGroupChatRequest;
 import org.example.splitbooks.dto.request.CreatePrivateChatRequest;
 import org.example.splitbooks.dto.response.ChatResponse;
+import org.example.splitbooks.dto.response.PageResponse;
+import org.example.splitbooks.dto.response.ShortChatResponse;
+import org.example.splitbooks.dto.response.ShortProfileResponse;
 import org.example.splitbooks.entity.*;
 import org.example.splitbooks.repositories.ChatParticipantRepository;
 import org.example.splitbooks.repositories.ChatRepository;
 import org.example.splitbooks.repositories.ProfileRepository;
 import org.example.splitbooks.repositories.UserRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.stream.Collectors;
+
 
 @Service
 public class ChatServiceImpl {
@@ -192,6 +199,36 @@ public class ChatServiceImpl {
         response.setParticipants(participantResponses);
 
         return response;
+
+    }
+
+    public PageResponse<ShortChatResponse> allChats(Pageable pageable) {
+        Long userId = getAuthenticatedUserId();
+        User user = getUserById(userId);
+
+        Profile profile = profileRepository.findByUser_UserIdAndType(userId, user.getActiveProfileType()).orElseThrow(() -> new RuntimeException("Active profile not found"));
+
+
+
+        Page<Chat> chats = chatRepository.findAllChatsByProfileId(profile.getProfileId(), pageable);
+
+        Page<ShortChatResponse> shortChatResponses = chats.map(chat-> {
+
+            if(chat.getChatType() == ChatType.GROUP) {
+                return new ShortChatResponse(chat.getChatId(), chat.getGroupName());
+            }else {
+
+                return chat.getParticipants().stream().filter(chatParticipant -> !chatParticipant.getParticipant().getProfileId().equals(profile.getProfileId())).findFirst().map(
+                        other -> {
+                            String otherName = other.getParticipant().getUsername();
+                            return new ShortChatResponse(chat.getChatId(), otherName);
+                        }
+                ).orElseGet(()-> new ShortChatResponse(chat.getChatId(), "Private Chat"));
+
+            }
+
+        });
+        return new PageResponse<>(shortChatResponses);
 
     }
     private void validateGroupParticipants(List<Profile> participants, GroupChatType groupChatType) {

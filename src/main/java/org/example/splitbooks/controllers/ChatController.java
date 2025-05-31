@@ -6,12 +6,14 @@ import org.example.splitbooks.dto.request.SendMessageRequest;
 import org.example.splitbooks.dto.response.ChatResponse;
 import org.example.splitbooks.dto.response.PageResponse;
 import org.example.splitbooks.dto.response.SendMessageResponse;
+import org.example.splitbooks.dto.response.ShortChatResponse;
 import org.example.splitbooks.services.impl.ChatServiceImpl;
 import org.example.splitbooks.services.impl.MessagingServiceImpl;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -59,12 +61,15 @@ public class ChatController {
 
     @GetMapping("/{chatId}/messages")
     public PageResponse<SendMessageResponse> getChatMessages(
-            @PathVariable Long chatId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
-    ) {
+            @PathVariable Long chatId,@PageableDefault(size = 20, sort = "timestamp", direction = Sort.Direction.DESC) Pageable pageable) {
 
-        return messagingService.getAllMessages(chatId, page, size);
+        return messagingService.getAllMessages(chatId, pageable);
+    }
+
+    @GetMapping("/allChats")
+    public PageResponse<ShortChatResponse> getAllChats(@PageableDefault(size = 10) Pageable pageable)
+    {
+        return chatService.allChats(pageable);
     }
 }
 

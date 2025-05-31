@@ -1,7 +1,8 @@
 package org.example.splitbooks.repositories;
 
 import org.example.splitbooks.entity.Chat;
-import org.example.splitbooks.entity.ChatParticipant;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -23,4 +24,11 @@ public interface ChatRepository extends JpaRepository<Chat, Long> {
     Chat findPrivateChatBetweenProfiles(@Param("profileId1") Long profileId1, @Param("profileId2") Long profileId2);
 
     Optional<Chat> findChatByChatId(Long chatId);
+
+    @Query("""
+    SELECT c FROM Chat c
+    JOIN c.participants cp1
+    WHERE cp1.participant.profileId = :profileId1
+""")
+    Page<Chat> findAllChatsByProfileId(@Param("profileId1") Long profileId , Pageable pageable) ;
 }
