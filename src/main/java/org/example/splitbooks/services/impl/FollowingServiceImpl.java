@@ -10,9 +10,11 @@ import org.example.splitbooks.repositories.ProfileRepository;
 import org.example.splitbooks.repositories.UserRepository;
 import org.example.splitbooks.services.FollowingService;
 import org.example.splitbooks.services.NotificationService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -32,6 +34,18 @@ public class FollowingServiceImpl implements FollowingService {
         this.profileRepository = profileRepository;
         this.followRepository = followRepository;
 
+    }
+
+
+    public List<ShortProfileResponse> searchByUsername(String username) {
+        List<Profile> profiles = profileRepository.findByUsernameContainingIgnoreCase(username);
+
+        return profiles.stream() .map(profile -> new ShortProfileResponse(
+                        profile.getProfileId(),
+                        profile.getUsername(),
+                        profile.getAvatarUrl()
+                ))
+                .collect(Collectors.toList());
     }
     public void follow(Long followingId) {
         Long userId = getAuthenticatedUserId();
@@ -56,6 +70,20 @@ public class FollowingServiceImpl implements FollowingService {
 
     }
 
+    public Boolean isFollowing(Long targetProfileId) {
+        Long userId = getAuthenticatedUserId();
+        User user = getUserById(userId);
+
+        Profile follower = profileRepository.findByUser_UserIdAndType(userId, user.getActiveProfileType())
+                .orElseThrow(() -> new RuntimeException("Active profile not found"));
+
+        Profile following = profileRepository.findByProfileId(targetProfileId)
+                .orElseThrow(() -> new RuntimeException("Profile not found"));
+
+        boolean followingExists = followRepository.existsByFollowerAndFollowing(follower, following);
+
+        return followingExists;
+    }
 
     public void unfollow(Long followingId) {
         Long userId = getAuthenticatedUserId();

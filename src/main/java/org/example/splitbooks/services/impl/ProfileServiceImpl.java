@@ -12,12 +12,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-
-
-
-//TODO make following and follows also implements the friendship suggestion
-//TODO: make it like a quotes with swiping
+import java.util.Set;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -30,7 +28,7 @@ public class ProfileServiceImpl implements ProfileService {
     private final ReadingFormatRepository readingFormatRepository;
     private final ReadingPreferenceRepository readingPreferenceRepository;
     private final UserRepository userRepository;
-
+    private final String DEFAUL_AVATAR = "https://res.cloudinary.com/dvzwpbmt7/image/upload/v1748786650/default-avatar_w2tksc.png";
     public ProfileServiceImpl(
             ProfileRepository profileRepository,
             UserRepository userRepository,
@@ -77,7 +75,13 @@ public class ProfileServiceImpl implements ProfileService {
             throw new RuntimeException("This profile has already been set up.");
         }
 
-        String avatarUrl = cloudinaryService.uploadAvatar(avatar);
+        String avatarUrl;
+        if (avatar == null || avatar.isEmpty()) {
+            avatarUrl = DEFAUL_AVATAR;
+        } else {
+            avatarUrl = cloudinaryService.uploadAvatar(avatar);
+        }
+
 
         if (profile.getType() == ProfileType.PUBLIC) {
             setupPublicProfile(profile, request, avatarUrl);
@@ -96,6 +100,7 @@ public class ProfileServiceImpl implements ProfileService {
         response.setPreferredLanguages(request.getPreferredLanguages());
         response.setSelectedGenres(request.getSelectedGenres());
         response.setAvatarUrl(avatarUrl);
+
         return response;
     }
 
@@ -146,6 +151,34 @@ public class ProfileServiceImpl implements ProfileService {
         return preferences;
     }
 
+    public ProfileResponse getProfileById(Long profileId) {
+        Profile profile = profileRepository.findById(profileId)
+                .orElseThrow(() -> new RuntimeException("Profile not found"));
+
+        ProfileResponse response = new ProfileResponse();
+        response.setId(profile.getProfileId());
+        response.setUsername(profile.getUsername());
+        response.setAvatarUrl(profile.getAvatarUrl());
+        response.setFollowers(profile.getFollowers().size());
+        response.setFollowing(profile.getFollowing().size());
+
+        if (profile.getType() == ProfileType.PUBLIC) {
+            response.setFirstName(profile.getFirstName());
+            response.setLastName(profile.getLastName());
+            response.setPhone(profile.getPhone());
+        }
+
+        response.setGenreNames(profile.getFavoriteGenres().stream().map(Genre::getGenreName).distinct().toList());
+        response.setFormatNames(profile.getReadingPreferences().stream().map(p -> p.getFormat().getFormatName()).distinct().toList());
+        response.setLanguageNames(profile.getReadingPreferences().stream().map(p -> p.getLanguage().getLanguageName()).distinct().toList());
+
+        response.setHasAnonymous(false); // Not relevant for other profiles
+        response.setSetupCompleted(profile.isSetupCompleted());
+        response.setAnonymous(profile.getType() == ProfileType.ANONYMOUS);
+
+
+        return response;
+    }
     public ProfileResponse getProfile() {
         Long userId = getAuthenticatedUserId();
         User user = getUserById(userId);
@@ -163,11 +196,18 @@ public class ProfileServiceImpl implements ProfileService {
             response.setLastName(profile.getLastName());
             response.setPhone(profile.getPhone());
         }
-
+        response.setId(profile.getProfileId());
+        response.setAvatarUrl(profile.getAvatarUrl());
+        response.setFollowers(profile.getFollowers().size());
+        response.setFollowing(profile.getFollowing().size());
         response.setGenreNames(profile.getFavoriteGenres().stream().map(Genre::getGenreName).distinct().toList());
         response.setFormatNames(profile.getReadingPreferences().stream().map(p -> p.getFormat().getFormatName()).distinct().toList());
         response.setLanguageNames(profile.getReadingPreferences().stream().map(p -> p.getLanguage().getLanguageName()).distinct().toList());
-
+        boolean hasAnonymous = user.getProfiles().stream()
+                .anyMatch(p -> p.getType() == ProfileType.ANONYMOUS);
+        response.setHasAnonymous(hasAnonymous);
+        response.setSetupCompleted(profile.isSetupCompleted());
+        response.setAnonymous(profile.getType() == ProfileType.ANONYMOUS);
         return response;
     }
 
@@ -200,25 +240,27 @@ public class ProfileServiceImpl implements ProfileService {
         Profile profile = profileRepository.findByUser_UserIdAndType(userId, user.getActiveProfileType())
                 .orElseThrow(() -> new RuntimeException("Active profile not found"));
 
+        if (avatar != null && !avatar.isEmpty()) {
+            cloudinaryService.deleteAvatarByUrl(profile.getAvatarUrl());
+            String avatarUrl = cloudinaryService.uploadAvatar(avatar);
+            profile.setAvatarUrl(avatarUrl);
+        }
+
         if (profile.getType() == ProfileType.PUBLIC) {
-            if (request.getFirstName() != null && !request.getFirstName().isEmpty())  profile.setFirstName(request.getFirstName());
+            if (request.getFirstName() != null )  profile.setFirstName(request.getFirstName());
             if (request.getLastName() != null) profile.setLastName(request.getLastName());
             if (request.getPhone() != null) profile.setPhone(request.getPhone());
         }
 
 
-        if (request.getUsername() != null && !profile.getUsername().equals(request.getUsername())) {
+        if (request.getUsername() != null && !request.getUsername().isEmpty() && !profile.getUsername().equals(request.getUsername())) {
             if (profileRepository.existsByUsername(request.getUsername())) {
                 throw new RuntimeException("Username is already taken. Please choose a different one.");
             }
 
             profile.setUsername(request.getUsername());
         }
-        if (avatar != null && !avatar.isEmpty()) {
-            cloudinaryService.deleteAvatarByUrl(profile.getAvatarUrl());
-            String newAvatar = cloudinaryService.uploadAvatar(avatar);
-            profile.setAvatarUrl(newAvatar);
-        }
+
         profileRepository.save(profile);
     }
 

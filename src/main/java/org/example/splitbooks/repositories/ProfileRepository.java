@@ -5,6 +5,7 @@ import org.example.splitbooks.entity.ProfileType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -15,5 +16,7 @@ public interface ProfileRepository extends JpaRepository<Profile, Long> {
     Profile findByUser_UserId(Long userId);
 
     Optional<Profile> findByProfileId(Long profileId);
+
+    List<Profile> findByUsernameContainingIgnoreCase(String username);
 
 }

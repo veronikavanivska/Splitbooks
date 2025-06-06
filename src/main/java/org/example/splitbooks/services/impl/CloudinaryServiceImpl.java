@@ -14,21 +14,23 @@ public class CloudinaryServiceImpl implements CloudinaryService {
 
         private final Cloudinary cloudinary;
 
+
         public CloudinaryServiceImpl(Cloudinary cloudinary) {
             this.cloudinary = cloudinary;
         }
 
-        public String uploadAvatar(MultipartFile file) {
-            try {
-                Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
-                        "folder", "avatars",
-                        "resource_type", "image"
-                ));
-                return uploadResult.get("secure_url").toString();
-            } catch (IOException e) {
-                throw new RuntimeException("Failed to upload avatar to Cloudinary", e);
-            }
+    public String uploadAvatar(MultipartFile file) {
+
+        try {
+            Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
+                    "folder", "avatars",
+                    "resource_type", "image"
+            ));
+            return uploadResult.get("secure_url").toString();
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to upload avatar to Cloudinary", e);
         }
+    }
 
         public void deleteAvatarByUrl(String secureUrl) {
             try {

@@ -26,16 +26,22 @@ public class ProfileController {
             return ResponseEntity.ok(profileResponse);
     }
 
+    @GetMapping("/{profileId}")
+    public ProfileResponse getProfileById(@PathVariable Long profileId) {
+        return profileServiceImpl.getProfileById(profileId);
+    }
+
+
     @PostMapping("/setup")
     public ResponseEntity<ProfileSetupResponse> setup(  @RequestPart("data") ProfileSetupRequest request,
-                                                        @RequestPart("avatar") MultipartFile avatarFile ) {
+                                                        @RequestPart(value = "avatar", required = false)  MultipartFile avatarFile ) {
         ProfileSetupResponse profileSetupResponse = profileServiceImpl.setUpProfile(request, avatarFile);
         return ResponseEntity.ok(profileSetupResponse);
     }
 
     @PatchMapping("/edit")
     public ResponseEntity<String> editProfile(@RequestPart(value = "data") EditProfileRequest request,
-                                            @RequestPart(value = "avatar") MultipartFile avatar) {
+                                              @RequestPart(value = "avatar", required = false) MultipartFile avatar) {
         try {
             profileServiceImpl.editProfile(request, avatar);
             return ResponseEntity.ok("Profile updated successfully");
