@@ -29,13 +29,13 @@ public class BooksController {
         ReviewResponse reviewResponse = booksService.addReview(request);
         return ResponseEntity.ok(reviewResponse);
     }
-    @DeleteMapping("/{volumeId}/removeReview/{reviewId}")
+    @DeleteMapping("/removeReview/{reviewId}")
     public ResponseEntity<String> removeReview(@PathVariable Long reviewId) {
         booksService.removeReview(reviewId);
         return ResponseEntity.ok("Review deleted successfully.");
     }
 
-    @GetMapping("/search")
+    @PostMapping("/search")
     public ResponseEntity<BooksResponse> getBooks(
             @RequestBody BooksSearchRequest request,
             @RequestParam(defaultValue = "0") int startIndex,
@@ -43,6 +43,11 @@ public class BooksController {
     ) {
 
         BooksResponse response = booksService.searchBooks(request, startIndex, maxResults);
+        return ResponseEntity.ok(response);
+    }
+    @GetMapping("/mybooks/{profileId}")
+    public ResponseEntity<BooksResponse> getMyBooks(@PathVariable Long profileId) {
+        BooksResponse response = booksService.getBooksByProfileId(profileId);
         return ResponseEntity.ok(response);
     }
 

@@ -15,6 +15,7 @@ public class ReviewResponse {
     private String username;
     private LocalDateTime createdAt;
     private Long parentReviewId;
+    private Long profileId;
 
     private List<ReviewResponse> replies = new ArrayList<>();
 }
