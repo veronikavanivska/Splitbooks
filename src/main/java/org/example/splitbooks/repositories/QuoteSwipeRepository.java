@@ -17,4 +17,5 @@ public interface QuoteSwipeRepository extends JpaRepository<QuoteSwipe, Long> {
     @Query("SELECT q.target.profileId FROM QuoteSwipe q WHERE q.swiper.profileId = :swiperId")
     List<Long> findTargetIdsBySwiperId(@Param("swiperId") Long swiperId);
 
+    boolean existsBySwiper_ProfileIdAndTarget_ProfileId(Long swiperId, Long targetId);
 }

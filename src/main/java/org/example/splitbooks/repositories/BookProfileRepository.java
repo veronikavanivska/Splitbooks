@@ -13,6 +13,7 @@ public interface BookProfileRepository extends JpaRepository<BookProfile, Long> 
     List<BookProfile> findByBook(Book book);
     BookProfile findByBookAndProfile(Book book, Profile profile);
 
+    boolean existsByBookAndProfile(Book book, Profile profile);
     List<BookProfile> findByBookProfileId(Long ProfileId);
     List<BookProfile> findByProfile_ProfileId(Long profileId);
 

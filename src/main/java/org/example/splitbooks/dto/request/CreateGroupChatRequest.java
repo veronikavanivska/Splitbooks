@@ -11,4 +11,6 @@ public class CreateGroupChatRequest {
     private String groupName;
     private List<Long> participantIds;
     private GroupChatType groupChatType;
+
+
 }

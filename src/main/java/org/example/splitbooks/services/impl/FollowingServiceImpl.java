@@ -43,7 +43,8 @@ public class FollowingServiceImpl implements FollowingService {
         return profiles.stream() .map(profile -> new ShortProfileResponse(
                         profile.getProfileId(),
                         profile.getUsername(),
-                        profile.getAvatarUrl()
+                        profile.getAvatarUrl(),
+                        profile.getType()
                 ))
                 .collect(Collectors.toList());
     }
@@ -110,7 +111,9 @@ public class FollowingServiceImpl implements FollowingService {
                     return new ShortProfileResponse(
                             follower.getProfileId(),
                             follower.getUsername(),
-                            follower.getAvatarUrl());
+                            follower.getAvatarUrl(),
+                            follower.getType()
+                    );
                 })
                 .toList();
     }
@@ -125,7 +128,8 @@ public class FollowingServiceImpl implements FollowingService {
                     return new ShortProfileResponse(
                             following.getProfileId(),
                             following.getUsername(),
-                            following.getAvatarUrl());
+                            following.getAvatarUrl(),
+                            following.getType());
                 })
                 .toList();
     }

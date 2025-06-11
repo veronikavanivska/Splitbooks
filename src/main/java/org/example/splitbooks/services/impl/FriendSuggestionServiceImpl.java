@@ -75,17 +75,9 @@ public class FriendSuggestionServiceImpl implements FriendSuggestionService {
                .sorted((entry1, entry2) -> entry2.getValue().compareTo(entry1.getValue()))
                .map(entry -> mapToShortProfileResponse(entry.getKey()))
                .collect(Collectors.toList());
-//       return similarityScore.entrySet().stream()
-//               .sorted((entry1, entry2) -> {
-//                   // First, sort by score (descending order)
-//                   return entry2.getValue().compareTo(entry1.getValue());
-//               })
-//               .map(entry -> mapToShortProfileResponse(entry.getKey()))
-//               .collect(Collectors.toList());
    }
 
     public List<ShortProfileResponse> filterOutFriendsAndFollowers( List<ShortProfileResponse> suggestedFriends) {
-        // Get the user's following list
         Long userId = getAuthenticatedUserId();
         User user = getUserById(userId);
 
@@ -141,6 +133,7 @@ public class FriendSuggestionServiceImpl implements FriendSuggestionService {
         response.setId(profile.getProfileId());
         response.setUsername(profile.getUsername());
         response.setAvatarUrl(profile.getAvatarUrl());
+        response.setType(profile.getType());
         return response;
     }
 

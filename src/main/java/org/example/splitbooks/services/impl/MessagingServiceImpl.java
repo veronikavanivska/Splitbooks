@@ -5,6 +5,7 @@ import org.example.splitbooks.dto.response.PageResponse;
 import org.example.splitbooks.dto.response.SendMessageResponse;
 import org.example.splitbooks.entity.*;
 import org.example.splitbooks.repositories.*;
+import org.springframework.cglib.core.Local;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -14,6 +15,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.PathVariable;
 
+import java.security.Principal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -37,43 +39,16 @@ public class MessagingServiceImpl {
 
     }
 
-//    public SendMessageResponse sendMessage(SendMessageRequest sendMessageRequest) {
-//        Long userId = getAuthenticatedUserId();
-//        User user = getUserById(userId);
-//
-//
-//        Profile sender = profileRepository.findByUser_UserIdAndType(userId, user.getActiveProfileType()).orElseThrow(()->new RuntimeException("Active profile is not found "));
-//
-//        Chat chat = chatRepository.findChatByChatId(sendMessageRequest.getChatId()).orElseThrow(() -> new RuntimeException("Chat not found"));
-//
-//        if (!chatParticipantRepository.existsByChatAndParticipant(chat, sender)) {
-//            throw new RuntimeException("User not part of chat");
-//        }
-//
-//        Message message = new Message();
-//        message.setChat(chat);
-//        message.setSender(sender);
-//        message.setContent(sendMessageRequest.getContent());
-//        message.setTimestamp(LocalDateTime.now());
-//        messageRepository.save(message);
-//
-//        SendMessageResponse sendMessageResponse = new SendMessageResponse();
-//        sendMessageResponse.setMessageId(message.getMessageId());
-//        sendMessageResponse.setContent(message.getContent());
-//        sendMessageResponse.setSenderUsername(sender.getUsername());
-//        sendMessageResponse.setTimestamp(LocalDateTime.now());
-//        sendMessageResponse.setSenderId(userId);
-//        return sendMessageResponse;
-//
-//
-//
-    //    }
     public SendMessageResponse sendMessage(SendMessageRequest sendMessageRequest, Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
+        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
 
         Profile sender = profileRepository.findByUser_UserIdAndType(userId, user.getActiveProfileType())
-                .orElseThrow(() -> new RuntimeException("Active profile is not found"));
+                .orElseThrow(() -> new RuntimeException("Active profile not found"));
+//        Profile sender = profileRepository.findById(sendMessageRequest.getProfileId())
+//                .orElseThrow(() -> new RuntimeException("Profile not found"));
+        if (!sender.getUser().getUserId().equals(userId)) {
+            throw new RuntimeException("Profile does not belong to user");
+        }
 
         Chat chat = chatRepository.findChatByChatId(sendMessageRequest.getChatId())
                 .orElseThrow(() -> new RuntimeException("Chat not found"));
@@ -87,16 +62,51 @@ public class MessagingServiceImpl {
         message.setSender(sender);
         message.setContent(sendMessageRequest.getContent());
         message.setTimestamp(LocalDateTime.now());
+
+        chat.setLastUpdated(LocalDateTime.now());
+        chatRepository.save(chat);
         messageRepository.save(message);
 
         SendMessageResponse sendMessageResponse = new SendMessageResponse();
         sendMessageResponse.setMessageId(message.getMessageId());
         sendMessageResponse.setContent(message.getContent());
         sendMessageResponse.setSenderUsername(sender.getUsername());
-        sendMessageResponse.setTimestamp(LocalDateTime.now());
-        sendMessageResponse.setSenderId(userId);
+        sendMessageResponse.setTimestamp(message.getTimestamp());
+        sendMessageResponse.setSenderId(message.getSender().getProfileId());
+
         return sendMessageResponse;
     }
+//    public SendMessageResponse sendMessage(SendMessageRequest sendMessageRequest, Long userId) {
+//        User user = userRepository.findById(userId)
+//                .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
+//
+//        Profile sender = profileRepository.findByUser_UserIdAndType(userId, user.getActiveProfileType())
+//                .orElseThrow(() -> new RuntimeException("Active profile is not found"));
+//
+//        Chat chat = chatRepository.findChatByChatId(sendMessageRequest.getChatId())
+//                .orElseThrow(() -> new RuntimeException("Chat not found"));
+//
+//        if (!chatParticipantRepository.existsByChatAndParticipant(chat, sender)) {
+//            throw new RuntimeException("User not part of chat");
+//        }
+//
+//        Message message = new Message();
+//        message.setChat(chat);
+//        message.setSender(sender);
+//        message.setContent(sendMessageRequest.getContent());
+//        message.setTimestamp(LocalDateTime.now());
+//        chat.setLastUpdated(LocalDateTime.now());
+//        chatRepository.save(chat);
+//        messageRepository.save(message);
+//
+//        SendMessageResponse sendMessageResponse = new SendMessageResponse();
+//        sendMessageResponse.setMessageId(message.getMessageId());
+//        sendMessageResponse.setContent(message.getContent());
+//        sendMessageResponse.setSenderUsername(sender.getUsername());
+//        sendMessageResponse.setTimestamp(LocalDateTime.now());
+//        sendMessageResponse.setSenderId(userId);
+//        return sendMessageResponse;
+//    }
 
     public PageResponse<SendMessageResponse> getAllMessages(Long chatId,Pageable pageable) {
         Chat chat = chatRepository.findById(chatId)

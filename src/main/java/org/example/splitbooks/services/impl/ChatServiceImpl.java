@@ -15,7 +15,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.nio.file.AccessDeniedException;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 
@@ -26,16 +31,20 @@ public class ChatServiceImpl {
     private final ProfileRepository profileRepository;
     private final ChatParticipantRepository chatParticipantRepository;
     private final UserRepository userRepository;
+    private final CloudinaryServiceImpl cloudinaryService;
+    private final String DEFAUL_AVATAR = "https://res.cloudinary.com/dvzwpbmt7/image/upload/v1748786650/default-avatar_w2tksc.png";
+    private final String DEFAULT_GROUP = "https://res.cloudinary.com/dvzwpbmt7/image/upload/v1749493812/group-chat-svgrepo-com_pi7icv.png";
 
-    public ChatServiceImpl(ChatRepository chatRepository, ProfileRepository profileRepository, ChatParticipantRepository chatParticipantRepository, UserRepository userRepository) {
+    public ChatServiceImpl(ChatRepository chatRepository,CloudinaryServiceImpl cloudinaryService, ProfileRepository profileRepository, ChatParticipantRepository chatParticipantRepository, UserRepository userRepository) {
         this.chatRepository = chatRepository;
         this.profileRepository = profileRepository;
         this.chatParticipantRepository = chatParticipantRepository;
         this.userRepository = userRepository;
+        this.cloudinaryService = cloudinaryService;
 
     }
 
-    public ChatResponse createGroupChat(CreateGroupChatRequest request) {
+    public ChatResponse createGroupChat(CreateGroupChatRequest request, MultipartFile file) {
         Long userId = getAuthenticatedUserId();
         User user = getUserById(userId);
 
@@ -62,14 +71,26 @@ public class ChatServiceImpl {
                 throw new RuntimeException("Public users can only create PUBLIC_ONLY or MIXED group chats");
             }
         }
+        String photo;
+        if (file == null || file.isEmpty()) {
+            photo = DEFAULT_GROUP;
+        } else {
+            photo = cloudinaryService.uploadAvatar(file);
+        }
+
 
         validateGroupParticipants(participants, request.getGroupChatType());
+        Optional<Chat> existingChat = findExistingGroupChatWithParticipants(participants, request.getGroupChatType(),request.getGroupName());
+        if (existingChat.isPresent()) {
+            return mapChatToResponse(existingChat.get());
+        }
 
         Chat chat = new Chat();
         chat.setGroup(true);
         chat.setGroupChatType(request.getGroupChatType());
         chat.setGroupName(request.getGroupName());
         chat.setChatType(ChatType.GROUP);
+        chat.setChatPhotoUrl(photo);
 
         chat = chatRepository.save(chat);
 
@@ -88,6 +109,7 @@ public class ChatServiceImpl {
         response.setGroupName(chat.getGroupName());
         response.setChatType(chat.getChatType());
         response.setGroupChatType(chat.getGroupChatType());
+        response.setChatPhotoUrl(photo);
 
         List<ChatResponse.ParticipantInfo> participantResponses = chat.getParticipants().stream()
                 .map(cp -> {
@@ -95,6 +117,74 @@ public class ChatServiceImpl {
                     pr.setProfileId(cp.getParticipant().getProfileId());
                     pr.setUsername(cp.getParticipant().getUsername());
                     pr.setProfileType(cp.getParticipant().getType());
+                    pr.setAvatarUrl(cp.getParticipant().getAvatarUrl());
+                    return pr;
+                })
+                .collect(Collectors.toList());
+
+        response.setParticipants(participantResponses);
+
+        return response;
+    }
+    private Optional<Chat> findExistingGroupChatWithParticipants(List<Profile> participants, GroupChatType groupChatType,String groupName) {
+
+        List<Chat> groupChats = chatRepository.findByIsGroupTrueAndGroupChatType(groupChatType);
+
+        Set<Long> participantIdsSet = participants.stream()
+                .map(Profile::getProfileId)
+                .collect(Collectors.toSet());
+
+        for (Chat chat : groupChats) {
+
+            if (!chat.getGroupName().equalsIgnoreCase(groupName)) {
+                continue;
+            }
+            List<ChatParticipant> chatParticipants = chatParticipantRepository.findByChat(chat);
+            Set<Long> chatParticipantIds = chatParticipants.stream()
+                    .map(cp -> cp.getParticipant().getProfileId())
+                    .collect(Collectors.toSet());
+
+            if (participantIdsSet.equals(chatParticipantIds)) {
+                return Optional.of(chat);
+            }
+        }
+        return Optional.empty();
+    }
+
+    public ChatResponse getChatById(Long chatId) {
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> new RuntimeException("Chat not found"));
+
+
+
+        return mapChatToResponse(chat);
+    }
+
+    public void deleteChat(Long chatId) {
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> new RuntimeException("Chat not found"));
+
+        chatRepository.delete(chat);
+    }
+
+
+
+    private ChatResponse mapChatToResponse(Chat chat) {
+        ChatResponse response = new ChatResponse();
+        response.setChatId(chat.getChatId());
+        response.setGroup(chat.isGroup());
+        response.setGroupName(chat.getGroupName());
+        response.setChatType(chat.getChatType());
+        response.setGroupChatType(chat.getGroupChatType());
+        response.setChatPhotoUrl(chat.getChatPhotoUrl());
+
+        List<ChatResponse.ParticipantInfo> participantResponses = chat.getParticipants().stream()
+                .map(cp -> {
+                    ChatResponse.ParticipantInfo pr = new ChatResponse.ParticipantInfo();
+                    pr.setProfileId(cp.getParticipant().getProfileId());
+                    pr.setUsername(cp.getParticipant().getUsername());
+                    pr.setProfileType(cp.getParticipant().getType());
+                    pr.setAvatarUrl(cp.getParticipant().getAvatarUrl());
                     return pr;
                 })
                 .collect(Collectors.toList());
@@ -144,6 +234,8 @@ public class ChatServiceImpl {
                         pr.setProfileId(cp.getParticipant().getProfileId());
                         pr.setUsername(cp.getParticipant().getUsername());
                         pr.setProfileType(cp.getParticipant().getType());
+                        pr.setAvatarUrl(cp.getParticipant().getAvatarUrl());
+                        response.setChatPhotoUrl(cp.getParticipant().getAvatarUrl());
                         return pr;
                     })
                     .collect(Collectors.toList());
@@ -172,7 +264,6 @@ public class ChatServiceImpl {
         ChatResponse response = new ChatResponse();
         response.setChatId(chat.getChatId());
         response.setGroup(chat.isGroup());
-
         response.setChatType(chat.getChatType());
         response.setGroupChatType(chat.getGroupChatType());
 
@@ -190,6 +281,8 @@ public class ChatServiceImpl {
                     pr.setProfileId(cp.getParticipant().getProfileId());
                     pr.setUsername(cp.getParticipant().getUsername());
                     pr.setProfileType(cp.getParticipant().getType());
+                    pr.setAvatarUrl(cp.getParticipant().getAvatarUrl());
+                    response.setChatPhotoUrl(cp.getParticipant().getAvatarUrl());
                     return pr;
                 })
                 .collect(Collectors.toList());
@@ -206,29 +299,31 @@ public class ChatServiceImpl {
 
         Profile profile = profileRepository.findByUser_UserIdAndType(userId, user.getActiveProfileType()).orElseThrow(() -> new RuntimeException("Active profile not found"));
 
-
-
-        Page<Chat> chats = chatRepository.findAllChatsByProfileId(profile.getProfileId(), pageable);
+        Page<Chat> chats = chatRepository.findAllChatsByProfileIdOrderByLastUpdatedDesc(profile.getProfileId(), pageable);
 
         Page<ShortChatResponse> shortChatResponses = chats.map(chat-> {
 
             if(chat.getChatType() == ChatType.GROUP) {
-                return new ShortChatResponse(chat.getChatId(), chat.getGroupName());
-            }else {
-
-                return chat.getParticipants().stream().filter(chatParticipant -> !chatParticipant.getParticipant().getProfileId().equals(profile.getProfileId())).findFirst().map(
-                        other -> {
+                return new ShortChatResponse(chat.getChatId(), chat.getGroupName(), chat.getChatPhotoUrl(), chat.isGroup(), chat.getLastUpdated()) ;
+            } else {
+                return chat.getParticipants().stream()
+                        .filter(chatParticipant -> !chatParticipant.getParticipant().getProfileId().equals(profile.getProfileId()))
+                        .findFirst()
+                        .map(other -> {
                             String otherName = other.getParticipant().getUsername();
-                            return new ShortChatResponse(chat.getChatId(), otherName);
-                        }
-                ).orElseGet(()-> new ShortChatResponse(chat.getChatId(), "Private Chat"));
-
+                            String otherAvatarUrl = other.getParticipant().getAvatarUrl();
+                            System.out.println(otherAvatarUrl);
+                            return new ShortChatResponse(chat.getChatId(), otherName, otherAvatarUrl,  chat.isGroup(), chat.getLastUpdated());
+                        })
+                        .orElseGet(() -> new ShortChatResponse(chat.getChatId(), "Private Chat", DEFAUL_AVATAR,  chat.isGroup(), chat.getLastUpdated()));
             }
 
         });
         return new PageResponse<>(shortChatResponses);
 
     }
+
+
     private void validateGroupParticipants(List<Profile> participants, GroupChatType groupChatType) {
         switch (groupChatType) {
             case ANONYMOUS_ONLY:

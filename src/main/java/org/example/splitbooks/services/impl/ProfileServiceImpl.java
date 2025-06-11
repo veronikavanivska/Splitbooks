@@ -29,6 +29,7 @@ public class ProfileServiceImpl implements ProfileService {
     private final ReadingPreferenceRepository readingPreferenceRepository;
     private final UserRepository userRepository;
     private final String DEFAUL_AVATAR = "https://res.cloudinary.com/dvzwpbmt7/image/upload/v1748786650/default-avatar_w2tksc.png";
+
     public ProfileServiceImpl(
             ProfileRepository profileRepository,
             UserRepository userRepository,
@@ -65,6 +66,9 @@ public class ProfileServiceImpl implements ProfileService {
 
 
     }
+
+
+
     public ProfileSetupResponse setUpProfile(ProfileSetupRequest request, MultipartFile avatar) {
         Long userId = getAuthenticatedUserId();
         User user = getUserById(userId);
@@ -172,7 +176,7 @@ public class ProfileServiceImpl implements ProfileService {
         response.setFormatNames(profile.getReadingPreferences().stream().map(p -> p.getFormat().getFormatName()).distinct().toList());
         response.setLanguageNames(profile.getReadingPreferences().stream().map(p -> p.getLanguage().getLanguageName()).distinct().toList());
 
-        response.setHasAnonymous(false); // Not relevant for other profiles
+        response.setHasAnonymous(false);
         response.setSetupCompleted(profile.isSetupCompleted());
         response.setAnonymous(profile.getType() == ProfileType.ANONYMOUS);
 
@@ -208,6 +212,7 @@ public class ProfileServiceImpl implements ProfileService {
         response.setHasAnonymous(hasAnonymous);
         response.setSetupCompleted(profile.isSetupCompleted());
         response.setAnonymous(profile.getType() == ProfileType.ANONYMOUS);
+        response.setRegisteredInGame(profile.isRegisteredInGame());
         return response;
     }
 

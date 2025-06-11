@@ -31,7 +31,6 @@ public class ProfileController {
         return profileServiceImpl.getProfileById(profileId);
     }
 
-
     @PostMapping("/setup")
     public ResponseEntity<ProfileSetupResponse> setup(  @RequestPart("data") ProfileSetupRequest request,
                                                         @RequestPart(value = "avatar", required = false)  MultipartFile avatarFile ) {

@@ -27,6 +27,13 @@ public class Chat {
 
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    @Column(name = "chat_photo_url")
+    private String chatPhotoUrl;
+
+    private LocalDateTime lastUpdated = LocalDateTime.now();
+
+
+
     @OneToMany(mappedBy = "chat", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ChatParticipant> participants = new ArrayList<>();
 

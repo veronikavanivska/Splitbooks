@@ -91,6 +91,7 @@ public class QuoteServiceImpl implements QuoteService {
 
         List<QuoteSetResponse> swipeCards = new ArrayList<>();
         int currentIndex = 0;
+
         if(!currentProfile.isRegisteredInGame())
             throw new RuntimeException("Profile is not registered in game");
 
@@ -126,6 +127,11 @@ public class QuoteServiceImpl implements QuoteService {
 
         if(!profile.isRegisteredInGame())
             throw new RuntimeException("Profile is not registered in game");
+        boolean alreadySwiped = quoteSwipeRepository
+                .existsBySwiper_ProfileIdAndTarget_ProfileId(profile.getProfileId(),targetProfileId);
+        if (alreadySwiped) {
+            throw new RuntimeException("You already swiped this profile.");
+        }
 
         QuoteSwipe swipe = new QuoteSwipe();
         swipe.setSwiper(profile);

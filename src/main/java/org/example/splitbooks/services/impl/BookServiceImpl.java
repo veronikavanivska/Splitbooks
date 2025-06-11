@@ -25,7 +25,8 @@
     import java.nio.file.AccessDeniedException;
     import java.time.LocalDateTime;
     import java.util.*;
-    
+    import java.util.stream.Collectors;
+
     @Service
     public class BookServiceImpl implements BookService {
     
@@ -77,7 +78,27 @@
 
                 BooksResponse.VolumeInfo volumeInfo = new BooksResponse.VolumeInfo();
                 volumeInfo.setTitle(book.getTitle());
-                volumeInfo.setAuthors(List.of(book.getAuthor().split(",")));
+                String authorsRaw = book.getAuthor();
+                List<String> authors;
+
+                if (authorsRaw != null) {
+                    authorsRaw = authorsRaw.trim();
+
+                    if (authorsRaw.startsWith("[") && authorsRaw.endsWith("]")) {
+                        authorsRaw = authorsRaw.substring(1, authorsRaw.length() - 1);
+                    }
+                }
+
+                if (authorsRaw == null || authorsRaw.trim().isEmpty()) {
+                    authors = Collections.emptyList();
+                } else {
+                    authors = Arrays.stream(authorsRaw.split(","))
+                            .map(String::trim)
+                            .filter(s -> !s.isEmpty())
+                            .collect(Collectors.toList());
+                }
+
+                volumeInfo.setAuthors(authors);
 
                 BooksResponse.ImageLinks imageLinks = new BooksResponse.ImageLinks();
                 imageLinks.setThumbnail(book.getImageUrl());
@@ -86,8 +107,8 @@
 
                 BooksResponse.Item item = new BooksResponse.Item();
                 item.setKind("mybooks#volume");
-                item.setId(String.valueOf(book.getBookId()));
-                item.setSelfLink("/books/" + book.getBookId());
+                item.setId(String.valueOf(book.getVolumeId()));
+                item.setSelfLink("/books/" + book.getVolumeId());
                 item.setVolumeInfo(volumeInfo);
 
                 return item;
@@ -104,6 +125,15 @@
 
 
         public BookWithReviewsResponse getBookWithReviews(String volumeId) {
+
+            Long userId = getAuthenticatedUserId();
+            User user = getUserById(userId);
+
+            Profile profile = profileRepository.findByUser_UserIdAndType(userId, user.getActiveProfileType())
+                    .orElseThrow(() -> new RuntimeException("Active profile not found"));
+
+            Book book = bookRepository.findByVolumeId(volumeId);
+
             BookDetailsResponse bookDetails = showBook(volumeId);
     
             List<BookReview> reviewEntities = bookReviewRepository.findByVolumeId(volumeId);
@@ -154,7 +184,12 @@
             }
 
             System.out.println("Top-level reviews count: " + topLevelReviews.size());
-    
+
+
+
+            boolean inLibrary = bookProfileRepository.existsByBookAndProfile(book, profile);
+            bookDetails.getVolumeInfo().setIsInLibrary(inLibrary);
+
             BookWithReviewsResponse response = new BookWithReviewsResponse();
             response.setBook(bookDetails);
             response.setReviews(topLevelReviews);

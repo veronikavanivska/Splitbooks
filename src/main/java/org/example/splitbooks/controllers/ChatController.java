@@ -16,8 +16,12 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.security.Principal;
 
 @RestController
 @RequestMapping("/api/chat")
@@ -33,35 +37,40 @@ public class ChatController {
         this.messagingTemplate = messagingTemplate;
     }
 
+    @GetMapping("/{chatId}")
+    public ResponseEntity<ChatResponse> getChatInfo(@PathVariable Long chatId) {
+        ChatResponse response = chatService.getChatById(chatId);
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{chatId}")
+    public ResponseEntity<?> deleteChat(@PathVariable Long chatId) {
+        chatService.deleteChat(chatId);
+        return ResponseEntity.noContent().build();
+    }
     @PostMapping("/group")
-    public ResponseEntity<ChatResponse> createGroupChat(@RequestBody CreateGroupChatRequest request) {
-        ChatResponse response = chatService.createGroupChat(request);
+    public ResponseEntity<ChatResponse> createGroupChat(@RequestPart("data") CreateGroupChatRequest request, @RequestPart(value = "avatar", required = false) MultipartFile file) {
+        ChatResponse response = chatService.createGroupChat(request,file);
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/private")
-    public ResponseEntity<ChatResponse> createPrivateChat(@RequestBody CreatePrivateChatRequest request) {
-        ChatResponse response = chatService.createPrivateChat(request);
-        return ResponseEntity.ok(response);
-    }
+        @PostMapping("/private")
+        public ResponseEntity<ChatResponse> createPrivateChat(@RequestBody CreatePrivateChatRequest request) {
+            ChatResponse response = chatService.createPrivateChat(request);
+            return ResponseEntity.ok(response);
+        }
 
-//    @MessageMapping("/chat.sendMessage")
-//    public void sendMessage(SendMessageRequest sendMessageRequest) {
-//        Long testUserId = 1L;
-//        SendMessageResponse response = messagingService.sendMessage(sendMessageRequest);
-//
-//        messagingTemplate.convertAndSend("/topic/chat." + sendMessageRequest.getChatId(), response);
-//    }
     @MessageMapping("/chat.sendMessage")
-    public void sendMessage(SendMessageRequest sendMessageRequest) {
-        Long testUserId = 2L;
-        SendMessageResponse response = messagingService.sendMessage(sendMessageRequest, testUserId);
-        messagingTemplate.convertAndSend("/topic/chat." + sendMessageRequest.getChatId(), response);
+    public void sendMessage(@Payload SendMessageRequest messageRequest, Principal principal) {
+        Long userId = Long.parseLong(principal.getName());
+
+        SendMessageResponse response = messagingService.sendMessage(messageRequest, userId);
+        messagingTemplate.convertAndSend("/topic/chat." + messageRequest.getChatId(), response);
     }
 
     @GetMapping("/{chatId}/messages")
     public PageResponse<SendMessageResponse> getChatMessages(
-            @PathVariable Long chatId,@PageableDefault(size = 20, sort = "timestamp", direction = Sort.Direction.DESC) Pageable pageable) {
+            @PathVariable Long chatId,@PageableDefault(size = 20, sort = "timestamp", direction = Sort.Direction.ASC) Pageable pageable) {
 
         return messagingService.getAllMessages(chatId, pageable);
     }
